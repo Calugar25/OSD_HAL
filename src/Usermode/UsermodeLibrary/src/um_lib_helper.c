@@ -35,10 +35,10 @@ LogBuffer(
     status = vsnprintf(logBuffer, LOG_BUF_MAX_SIZE, FormatBuffer, va);
     ASSERT(SUCCEEDED(status));
 
-    status = SyscallFileWrite(UM_FILE_HANDLE_STDOUT,
-                              logBuffer,
-                              strlen(logBuffer) + 1,
-                              &bytesWritten);
+    SyscallFileWrite(UM_FILE_HANDLE_STDOUT,
+                     logBuffer,
+                     strlen(logBuffer) + 1,
+                     &bytesWritten);
     ASSERT(SUCCEEDED(status));
     ASSERT(bytesWritten == strlen(logBuffer) + 1);
 }
