@@ -45,7 +45,7 @@ sub SetupPathsCmdFile
 
 my $numArgs = $#ARGV + 1;
 
-my $projectRootBasePath = File::Spec->rel2abs(catfile("..\\..", "hal_dev"));
+my $projectRootBasePath = File::Spec->rel2abs(catfile("..\\..", "HAL9000"));
 my $vmPaths = catfile($projectRootBasePath, "VM");
 my $pxePath = catfile($projectRootBasePath, "PXE");
 
