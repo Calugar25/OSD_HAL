@@ -17,7 +17,7 @@ typedef struct _THREADING_DATA
     struct _THREAD*     CurrentThread;
     struct _THREAD*     PreviousThread;
 
-    BOOLEAN             YieldOnInterruptReturn;
+	BOOLEAN				YieldOnInterruptReturn;
 
     QWORD               IdleTicks;
     QWORD               KernelTicks;

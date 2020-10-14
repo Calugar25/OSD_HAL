@@ -10,9 +10,9 @@
 #include "gdtmu.h"
 #include "pe_exports.h"
 
-#define TID_INCREMENT               4
+#define TID_INCREMENT               16
 
-#define THREAD_TIME_SLICE           1
+#define THREAD_TIME_SLICE           4
 
 extern void ThreadStart();
 
@@ -727,9 +727,9 @@ _ThreadInit(
     OUT_PTR     PTHREAD*            Thread,
     IN          BOOLEAN             AllocateKernelStack
     )
-{
+{	
     STATUS status;
-    PTHREAD pThread;
+	PTHREAD pThread;
     DWORD nameLen;
     PVOID pStack;
     INTR_STATE oldIntrState;
@@ -798,10 +798,13 @@ _ThreadInit(
 
 		strcpy(pThread->Name, Name);
 
+		//PTHREAD currentThread = GetCurrentThread();
+		//pThread->parentId = currentThread->Id;
+
 		pThread->Id = _ThreadSystemGetNextTid();
 		pThread->State = ThreadStateBlocked;
 		pThread->Priority = Priority;
-
+		
 		
 
 		LockInit(&pThread->BlockLock);
@@ -832,7 +835,7 @@ _ThreadInit(
         LOG_FUNC_END;
     }
 
-
+	LOG("The thread with name %s and thread id 0x%x was created \n", pThread->Name, pThread->Id);
 
     return status;
 }
@@ -1209,7 +1212,7 @@ _ThreadDestroy(
     RemoveEntryList(&pThread->AllList);
     LockRelease(&m_threadSystemData.AllThreadsLock, oldState);
 
-	
+	LOG("Thread with thread name %s and thread id 0x%x was destroyed\n", pThread->Name, pThread->Id);
 
     // This must be done before removing the thread from the process list, else
     // this may be the last thread and the process VAS will be freed by the time
