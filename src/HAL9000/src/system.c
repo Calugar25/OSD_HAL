@@ -71,7 +71,7 @@ SystemInit(
     pCpu = NULL;
 
     LogSystemInit(LogLevelInfo,
-                  LogComponentInterrupt | LogComponentIo | LogComponentAcpi,
+                  LogComponentInterrupt | LogComponentIo | LogComponentAcpi|LogComponentGeneric,
                   TRUE
                   );
 
@@ -96,6 +96,7 @@ SystemInit(
         return status;
     }
 
+	LOG("HelloMMM\n");
     LOG("Serial communications initialized\n");
     LOG("Running HAL9000 %s version %s built on %s\n",
         OsGetBuildType(),

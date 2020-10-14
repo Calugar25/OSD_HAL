@@ -16,6 +16,7 @@
 #include "ex_timer.h"
 #include "vmm.h"
 #include "pit.h"
+#include "thread.h"
 
 
 #pragma warning(push)
@@ -129,6 +130,9 @@ void
 
     ASSERT(NumberOfParameters == 0);
 
+
+
+	LOG("AllThreadsCount:%d ",getNumberThreads());
     LOG("%7s", "TID|");
     LOG("%20s", "Name|");
     LOG("%5s", "Prio|");

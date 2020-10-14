@@ -38,6 +38,9 @@ typedef struct _THREAD
     struct _THREAD          *Self;
 
     TID                     Id;
+
+	
+
     char*                   Name;
 
     // Currently the thread priority is not used for anything

@@ -41,6 +41,7 @@ ThreadYield(
     void
     );
 
+DWORD getNumberThreads();
 //******************************************************************************
 // Function:     ThreadExit
 // Description:  Causes the current thread to exit. Never returns.

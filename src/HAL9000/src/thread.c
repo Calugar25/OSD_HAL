@@ -25,6 +25,8 @@ void
 
 extern FUNC_ThreadSwitch            ThreadSwitch;
 
+
+ 
 typedef struct _THREAD_SYSTEM_DATA
 {
     LOCK                AllThreadsLock;
@@ -36,10 +38,15 @@ typedef struct _THREAD_SYSTEM_DATA
 
     _Guarded_by_(ReadyThreadsLock)
     LIST_ENTRY          ReadyThreadsList;
+	volatile DWORD AllThreadsCount;
 } THREAD_SYSTEM_DATA, *PTHREAD_SYSTEM_DATA;
 
 static THREAD_SYSTEM_DATA m_threadSystemData;
 
+DWORD getNumberThreads()
+{
+	return m_threadSystemData.AllThreadsCount;
+}
 __forceinline
 static
 TID
@@ -145,6 +152,7 @@ ThreadSystemPreinit(
 
     InitializeListHead(&m_threadSystemData.ReadyThreadsList);
     LockInit(&m_threadSystemData.ReadyThreadsLock);
+	m_threadSystemData.AllThreadsCount = 0;
 }
 
 STATUS
@@ -156,7 +164,7 @@ ThreadSystemInitMainForCurrentCPU(
     PPCPU pCpu;
     char mainThreadName[MAX_PATH];
     PTHREAD pThread;
-    PPROCESS pProcess;
+	PPROCESS pProcess;
 
     LOG_FUNC_START;
 
@@ -738,68 +746,76 @@ _ThreadInit(
     nameLen = strlen(Name);
     pStack = NULL;
 
-    __try
-    {
-        pThread = ExAllocatePoolWithTag(PoolAllocateZeroMemory, sizeof(THREAD), HEAP_THREAD_TAG, 0);
-        if (NULL == pThread)
-        {
-            LOG_FUNC_ERROR_ALLOC("HeapAllocatePoolWithTag", sizeof(THREAD));
-            status = STATUS_HEAP_INSUFFICIENT_RESOURCES;
-            __leave;
-        }
+	__try
+	{
+		pThread = ExAllocatePoolWithTag(PoolAllocateZeroMemory, sizeof(THREAD), HEAP_THREAD_TAG, 0);
+		if (NULL == pThread)
+		{
+			LOG_FUNC_ERROR_ALLOC("HeapAllocatePoolWithTag", sizeof(THREAD));
+			status = STATUS_HEAP_INSUFFICIENT_RESOURCES;
+			__leave;
+		}
 
-        RfcPreInit(&pThread->RefCnt);
+		RfcPreInit(&pThread->RefCnt);
 
-        status = RfcInit(&pThread->RefCnt, _ThreadDestroy, NULL);
-        if (!SUCCEEDED(status))
-        {
-            LOG_FUNC_ERROR("RfcInit", status);
-            __leave;
-        }
+		status = RfcInit(&pThread->RefCnt, _ThreadDestroy, NULL);
+		if (!SUCCEEDED(status))
+		{
+			LOG_FUNC_ERROR("RfcInit", status);
+			__leave;
+		}
 
-        pThread->Self = pThread;
+		pThread->Self = pThread;
 
-        status = ExEventInit(&pThread->TerminationEvt, ExEventTypeNotification, FALSE);
-        if (!SUCCEEDED(status))
-        {
-            LOG_FUNC_ERROR("ExEventInit", status);
-            __leave;
-        }
+		status = ExEventInit(&pThread->TerminationEvt, ExEventTypeNotification, FALSE);
+		if (!SUCCEEDED(status))
+		{
+			LOG_FUNC_ERROR("ExEventInit", status);
+			__leave;
+		}
 
-        if (AllocateKernelStack)
-        {
-            pStack = MmuAllocStack(STACK_DEFAULT_SIZE, TRUE, FALSE, NULL);
-            if (NULL == pStack)
-            {
-                LOG_FUNC_ERROR_ALLOC("MmuAllocStack", STACK_DEFAULT_SIZE);
-                status = STATUS_MEMORY_CANNOT_BE_COMMITED;
-                __leave;
-            }
-            pThread->Stack = pStack;
-            pThread->InitialStackBase = pStack;
-            pThread->StackSize = STACK_DEFAULT_SIZE;
-        }
+		if (AllocateKernelStack)
+		{
+			pStack = MmuAllocStack(STACK_DEFAULT_SIZE, TRUE, FALSE, NULL);
+			if (NULL == pStack)
+			{
+				LOG_FUNC_ERROR_ALLOC("MmuAllocStack", STACK_DEFAULT_SIZE);
+				status = STATUS_MEMORY_CANNOT_BE_COMMITED;
+				__leave;
+			}
+			pThread->Stack = pStack;
+			pThread->InitialStackBase = pStack;
+			pThread->StackSize = STACK_DEFAULT_SIZE;
+		}
 
-        pThread->Name = ExAllocatePoolWithTag(PoolAllocateZeroMemory, sizeof(char)*(nameLen + 1), HEAP_THREAD_TAG, 0);
-        if (NULL == pThread->Name)
-        {
-            LOG_FUNC_ERROR_ALLOC("HeapAllocatePoolWithTag", sizeof(char)*(nameLen + 1));
-            status = STATUS_HEAP_INSUFFICIENT_RESOURCES;
-            __leave;
-        }
+		pThread->Name = ExAllocatePoolWithTag(PoolAllocateZeroMemory, sizeof(char) * (nameLen + 1), HEAP_THREAD_TAG, 0);
+		if (NULL == pThread->Name)
+		{
+			LOG_FUNC_ERROR_ALLOC("HeapAllocatePoolWithTag", sizeof(char) * (nameLen + 1));
+			status = STATUS_HEAP_INSUFFICIENT_RESOURCES;
+			__leave;
+		}
 
-        strcpy(pThread->Name, Name);
+		strcpy(pThread->Name, Name);
 
-        pThread->Id = _ThreadSystemGetNextTid();
-        pThread->State = ThreadStateBlocked;
-        pThread->Priority = Priority;
+		pThread->Id = _ThreadSystemGetNextTid();
+		pThread->State = ThreadStateBlocked;
+		pThread->Priority = Priority;
 
-        LockInit(&pThread->BlockLock);
+		
 
-        LockAcquire(&m_threadSystemData.AllThreadsLock, &oldIntrState);
-        InsertTailList(&m_threadSystemData.AllThreadsList, &pThread->AllList);
-        LockRelease(&m_threadSystemData.AllThreadsLock, oldIntrState);
-    }
+		LockInit(&pThread->BlockLock);
+
+		LockAcquire(&m_threadSystemData.AllThreadsLock, &oldIntrState);
+		InsertTailList(&m_threadSystemData.AllThreadsList, &pThread->AllList);
+		LockRelease(&m_threadSystemData.AllThreadsLock, oldIntrState);
+
+		_InterlockedIncrement(&m_threadSystemData.AllThreadsCount);
+	}
+
+
+
+
     __finally
     {
         if (!SUCCEEDED(status))
@@ -815,6 +831,8 @@ _ThreadInit(
 
         LOG_FUNC_END;
     }
+
+
 
     return status;
 }
@@ -1191,6 +1209,8 @@ _ThreadDestroy(
     RemoveEntryList(&pThread->AllList);
     LockRelease(&m_threadSystemData.AllThreadsLock, oldState);
 
+	
+
     // This must be done before removing the thread from the process list, else
     // this may be the last thread and the process VAS will be freed by the time
     // ProcessRemoveThreadFromList - this function also dereferences the process
@@ -1218,6 +1238,7 @@ _ThreadDestroy(
     }
 
     ExFreePoolWithTag(pThread, HEAP_THREAD_TAG);
+	_InterlockedDecrement(&m_threadSystemData.AllThreadsCount);
 }
 
 static
