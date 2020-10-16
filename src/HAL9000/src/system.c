@@ -70,7 +70,7 @@ SystemInit(
     status = STATUS_SUCCESS;
     pCpu = NULL;
 
-    LogSystemInit(LogLevelInfo,
+    LogSystemInit(LogLevelError,
                   LogComponentInterrupt | LogComponentIo | LogComponentAcpi|LogComponentGeneric,
                   TRUE
                   );
@@ -248,11 +248,16 @@ SystemInit(
     LOGL("Successfully intiialized system process!\n");
 
     status = ThreadSystemInitIdleForCurrentCPU();
+
+
+
     if (!SUCCEEDED(status))
     {
         LOG_FUNC_ERROR("ThreadSystemInitIdleForCurrentCPU", status);
         return status;
     }
+
+	LogSetLevel(LogLevelInfo);
 
     LOGL("ThreadSystemInitIdleForCurrentCPU succeeded\n");
 
@@ -313,6 +318,8 @@ SystemInit(
     }
 
     LOGL("Network stack successfully initialized\n");
+
+
 
     return status;
 }

@@ -62,6 +62,10 @@ Entry64(
 
     LOGL("InitSystem executed successfully\n");
 
+	LogSetLevel(LogLevelTrace);
+	LogSetTracedComponents(LogComponentThread);
+
+
 #ifdef TST
     TestRunAllFunctional();
     TestRunAllPerformance();
