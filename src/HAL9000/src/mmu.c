@@ -252,11 +252,15 @@ MmuPreinitSystem(
     RecRwSpinlockInit(0, &m_mmuData.PagingData.Lock);
 
     InitializeListHead(&m_mmuData.ZeroThreadData.PagesToZeroList);
+
     LockInit(&m_mmuData.ZeroThreadData.PagesLock);
-    DWORD z = *((PBYTE)NULL);z;
+
 
     PmmPreinitSystem();
+	
     VmmPreinit();
+
+	
 }
 
 // We have the following virtual memory layout
@@ -320,22 +324,27 @@ MmuInitSystem(
     }
     LOGL("ExEventInit succeeded\n");
 
+
     status = _MmuRetrieveKernelInfoAndValidate(KernelBaseAddress,
                                                KernelSize,
                                                &m_mmuData.KernelInfo
                                                );
+	
     if (!SUCCEEDED(status))
     {
         LOG_FUNC_ERROR("_MmuRetrieveKernelInfoAndValidate", status );
         return status;
     }
+	
     LOGL("_MmuRetrieveKernelInfoAndValidate succeeded\n");
+	
 
     alignedKernelSize = AlignAddressUpper(m_mmuData.KernelInfo.Size, PAGE_SIZE);
     pNewStackTop = PtrOffset(m_mmuData.KernelInfo.ImageBase,
                              alignedKernelSize + TEMP_STACK_SIZE + STACK_GUARD_SIZE);
     pmmBaseAddress = pNewStackTop;
     m_mmuData.TemporaryStackBase = pNewStackTop - TEMP_STACK_SIZE;
+
 
     // change to new stack
     LOGL("Will change to a temporary stack at 0x%X\n", pNewStackTop );
@@ -346,6 +355,7 @@ MmuInitSystem(
                            NumberOfMemoryEntries,
                            &pmmSizeRequired
                            );
+
     if (!SUCCEEDED(status))
     {
         LOG_FUNC_ERROR("PmmInitSystem", status );
@@ -353,9 +363,12 @@ MmuInitSystem(
     }
 
     LOG("PmmInitSystem suceeded and needs %u bytes\n", pmmSizeRequired);
+
     pPagingStructuresAddrBase = (PVOID) AlignAddressUpper( pmmBaseAddress + pmmSizeRequired, PAGE_SIZE );
 
     status = _MmuInitPagingSystem(pPagingStructuresAddrBase);
+
+
     if (!SUCCEEDED(status))
     {
         LOG_FUNC_ERROR("_MmuInitInternal", status);
@@ -380,26 +393,36 @@ MmuInitSystem(
 
     // reserve and map the first page used by the
     // virtual memory manager
+
+
+	
     status = _MmuReserveAndMapMemory(&m_mmuData.PagingData.Data,
                                      pVmmAddressBase,
                                      PAGE_SIZE,
                                      VA2PA(pVmmAddressBase),
                                      PAGE_RIGHTS_READWRITE
                                      );
+	
+
+
     if (!SUCCEEDED(status))
     {
         LOG_FUNC_ERROR("_MmuReserveAndMapMemory", status);
         return status;
     }
-
+	
+	
     // reserve and map the allocation bitmap used by the
     // physical memory manager
+	
     status = _MmuReserveAndMapMemory(&m_mmuData.PagingData.Data,
                                      pmmBaseAddress,
                                      pmmSizeRequired,
                                      VA2PA(pmmBaseAddress),
                                      PAGE_RIGHTS_READWRITE
                                      );
+	__halt();
+	
     if (!SUCCEEDED(status))
     {
         LOG_FUNC_ERROR("_MmuReserveAndMapMemory", status);
@@ -1815,6 +1838,8 @@ _MmuReserveAndMapMemory(
 
     noOfFrames = Size / PAGE_SIZE;
 
+	
+
     pa = PmmReserveMemoryEx( noOfFrames, PhysicalAddress);
     if( ( NULL == pa ) || ( pa != PhysicalAddress) )
     {
@@ -1866,7 +1891,10 @@ _MmuInitializeHeap(
 
     LOG("Total size reserved for heap: %U bytes ( %U KB )\n", heapSize, heapSize / KB_SIZE);
 
+	
     status = HeapInitializeSystem(heapSize, &Heap->Heap);
+
+	
     if (!SUCCEEDED(status))
     {
         LOG_FUNC_ERROR("HeapInitializeSystem", status);
@@ -1877,6 +1905,7 @@ _MmuInitializeHeap(
 
     LockInit(&Heap->HeapLock);
 
+	
     return status;
 }
 

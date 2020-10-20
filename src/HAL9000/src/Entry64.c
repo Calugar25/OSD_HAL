@@ -32,7 +32,9 @@ Entry64(
     memzero(&initSettings, sizeof(COMMON_LIB_INIT));
 
     initSettings.Size = sizeof(COMMON_LIB_INIT);
+	
     initSettings.AssertFunction = Hal9000Assert;
+
 
     CpuMuPreinit();
 
@@ -50,6 +52,7 @@ Entry64(
     ASSERT_INFO(NULL != argv, "We are expecting a non-NULL pointer\n");
 
     gVirtualToPhysicalOffset = argv->VirtualToPhysicalOffset;
+
     SystemPreinit();
 
     DumpParameters(argv);

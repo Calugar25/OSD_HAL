@@ -162,6 +162,8 @@ CpuMuAllocAndInitCpu(
     IN          BYTE        NoOfTssStacks
     )
 {
+
+	
     STATUS status;
     PPCPU pPcpu;
 
@@ -267,6 +269,8 @@ CpuMuInitCpu(
     IN          BOOLEAN     ChangeStack
     )
 {
+
+	
     STATUS status;
 
     ASSERT( NULL != PhysicalCpu );

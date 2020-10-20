@@ -25,6 +25,8 @@ CmdPrintVolumeInformation(
     IomuExecuteForEachVpb(DumpVpb, NULL, FALSE);
 }
 
+
+
 // warning C4717: '_CmdInfiniteRecursion': recursive on all control paths, function will cause runtime stack overflow
 #pragma warning(disable:4717)
 void
@@ -37,6 +39,7 @@ CmdInfiniteRecursion(
     CmdInfiniteRecursion(NumberOfParameters);
 }
 #pragma warning(default:4717)
+
 
 void
 CmdRtcFail(

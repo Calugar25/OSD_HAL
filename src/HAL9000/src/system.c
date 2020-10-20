@@ -39,18 +39,26 @@ SystemPreinit(
     void
     )
 {
+	
     memzero(&m_systemData, sizeof(SYSTEM_DATA));
-
+	
     m_systemData.NumberOfTssStacks = NO_OF_TSS_STACKS;
 
     BootModulesPreinit();
+	
     DumpPreinit();
+	
+
     ThreadSystemPreinit();
     printSystemPreinit(NULL);
+	
     LogSystemPreinit();
     OsInfoPreinit();
+	
     MmuPreinitSystem();
+	
     IomuPreinitSystem();
+
     AcpiInterfacePreinit();
     SmpPreinit();
     PciSystemPreinit();
@@ -65,6 +73,8 @@ SystemInit(
     IN  ASM_PARAMETERS*     Parameters
     )
 {
+
+
     STATUS status;
     PCPU* pCpu;
 

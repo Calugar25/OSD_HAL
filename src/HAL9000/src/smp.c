@@ -247,6 +247,8 @@ SmpSetupLowerMemory(
     apTrampCodeAddress = 0;
     pWakeUpEvent = NULL;
 
+
+
 #pragma warning(suppress:4127)
     while (TRUE)
     {

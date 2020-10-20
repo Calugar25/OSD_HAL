@@ -32,8 +32,10 @@ void
 
     LOGP_ERROR( "%s\n", Message);
 
+	
+
     AssertFreeLock();
 
-    CpuIntrDisable();
+	CpuIntrDisable();
     __halt();
 }

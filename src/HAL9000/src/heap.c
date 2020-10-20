@@ -125,6 +125,8 @@ HeapInitializeSystem(
     pHeapHeader->HeapNumberOfAllocations = 0;
     pHeapHeader->EntryToRestartSearch = &pHeapHeader->HeapAllocations;
 
+
+
     pHeapHeader->FreeAddress = pHeapHeader->BaseAddress + sizeof( HEAP_HEADER );
     InitializeListHead( &pHeapHeader->HeapAllocations );
 

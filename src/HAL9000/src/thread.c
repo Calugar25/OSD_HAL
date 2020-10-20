@@ -156,6 +156,8 @@ ThreadSystemInitMainForCurrentCPU(
     PTHREAD pThread;
     PPROCESS pProcess;
 
+	
+
     LOG_FUNC_START;
 
     status = STATUS_SUCCESS;
@@ -165,7 +167,7 @@ ThreadSystemInitMainForCurrentCPU(
 
     ASSERT( NULL != pCpu );
 
-    memzero(mainThreadName, MAX_PATH + 1);
+    memzero(mainThreadName, MAX_PATH );
 
     snprintf( mainThreadName, MAX_PATH, "%s-%02x", "main", pCpu->ApicId );
 
@@ -619,9 +621,9 @@ ThreadGetName(
     IN_OPT  PTHREAD             Thread
     )
 {
-    PTHREAD pThread = Thread;
+	PTHREAD pThread = (NULL != Thread) ? Thread : GetCurrentThread();
 
-    return pThread->Name;
+	return (NULL != pThread) ? pThread->Name : "";
 }
 
 TID
@@ -717,6 +719,8 @@ _ThreadInit(
     DWORD nameLen;
     PVOID pStack;
     INTR_STATE oldIntrState;
+
+	
 
     LOG_FUNC_START;
 

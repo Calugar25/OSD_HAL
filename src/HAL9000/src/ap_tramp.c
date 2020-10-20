@@ -247,6 +247,8 @@ ApInitCpu(
     IN      struct _PCPU*   Cpu
     )
 {
+
+	__halt();
     STATUS status;
 
     CHECK_STACK_ALIGNMENT;
