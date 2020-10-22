@@ -2,6 +2,20 @@
 #include "ex_timer.h"
 #include "iomu.h"
 #include "thread_internal.h"
+#include "lock_common.h"
+
+ struct _GLOBAL_TIMER_LIST
+{
+	// protect the global timer list
+	LOCK TimerListLock;
+	// the list ’s head
+	LIST_ENTRY TimerListHead;
+
+};
+
+static struct _GLOBAL_TIMER_LIST m_globalTimerList;
+
+
 
 STATUS
 ExTimerInit(
@@ -11,6 +25,11 @@ ExTimerInit(
     )
 {
     STATUS status;
+
+	//ExTimerInit(): add the new timer in the global timer list;
+	ASSERT(NULL != Timer);
+	InsertTailList(&m_globalTimerList.TimerListHead, &Timer->TimerListElem);
+	
 
     if (NULL == Timer)
     {
@@ -44,6 +63,8 @@ ExTimerInit(
 
     return status;
 }
+
+
 
 void
 ExTimerStart(

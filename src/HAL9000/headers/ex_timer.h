@@ -1,5 +1,7 @@
 #pragma once
 
+#include "ex_event.h"
+
 typedef enum _EX_TIMER_TYPE
 {
     ExTimerTypeAbsolute,
@@ -7,6 +9,8 @@ typedef enum _EX_TIMER_TYPE
     ExTimerTypeRelativePeriodic,
     ExTimerTypeMax = ExTimerTypeRelativePeriodic
 } EX_TIMER_TYPE;
+
+
 
 typedef struct _EX_TIMER
 {
@@ -17,6 +21,12 @@ typedef struct _EX_TIMER
     QWORD               ReloadTimeUs;
 
     EX_TIMER_TYPE       Type;
+
+	// keep track of threads waiting ( blocked ) for the timer
+	EX_EVENT TimerEvent;
+	// used to place the timer in a global timer list
+	LIST_ENTRY TimerListElem;
+
 
     volatile BOOLEAN    TimerStarted;
     BOOLEAN             TimerUninited;
