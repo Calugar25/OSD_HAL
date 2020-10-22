@@ -21,6 +21,7 @@
 #include "ex_system.h"
 #include "process_internal.h"
 #include "boot_module.h"
+#include "ex_timer.c"
 
 #define NO_OF_TSS_STACKS             7
 STATIC_ASSERT(NO_OF_TSS_STACKS <= NO_OF_IST);
@@ -33,6 +34,20 @@ typedef struct _SYSTEM_DATA
 static SYSTEM_DATA m_systemData;
 
 QWORD gVirtualToPhysicalOffset;
+
+struct _GLOBAL_TIMER_LIST
+{
+	// protect the global timer list
+	LOCK TimerListLock;
+	// the list ’s head
+	LIST_ENTRY TimerListHead;
+
+};
+
+//static struct _GLOBAL_TIMER_LIST m_globalTimerList;
+
+
+
 
 void
 SystemPreinit(
@@ -57,6 +72,11 @@ SystemPreinit(
     CorePreinit();
     NetworkStackPreinit();
     ProcessSystemPreinit();
+
+	//create a new function ExTimerSystemPreinit() to be called where other
+	//functions initializing other OS’s components were called
+	ExTimerSystemPreinit();
+
 }
 
 STATUS
