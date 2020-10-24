@@ -4,6 +4,7 @@
 #include "ref_cnt.h"
 #include "ex_event.h"
 #include "thread.h"
+#include "mutex.h"
 
 typedef enum _THREAD_STATE
 {
@@ -43,6 +44,11 @@ typedef struct _THREAD
     // Currently the thread priority is not used for anything
     THREAD_PRIORITY         Priority;
     THREAD_STATE            State;
+
+    //For priority donation
+    THREAD_PRIORITY        RealPriority;
+    LIST_ENTRY             AcquiredMutexesList;
+    PMUTEX                 WaitedMutex;
 
     // valid only if State == ThreadStateTerminated
     STATUS                  ExitStatus;
