@@ -288,3 +288,31 @@ void
 ThreadSetPriority(
     IN      THREAD_PRIORITY     NewPriority
     );
+
+//******************************************************************************
+// Function:     ThreadDonatePriority
+// Description:  Donates priority from higher priority thread to lower priority
+//               one, also taking into account possible nested donations.
+// Returns:      void
+// Parameter:    IN PTHREAD DonorThread
+// Parameter:    IN PTHREAD DoneeThread
+//******************************************************************************
+void
+ThreadDonatePriority(
+    IN      PTHREAD     DonorThread,
+    INOUT      PTHREAD     DoneeThread
+    );
+
+
+//******************************************************************************
+// Function:     ThreadRecomputePriority
+// Description:  Recompute effective priority of the thread, based on real
+//               priority and donated priorities if the thread still holds
+//               other mutexes.
+// Returns:      void
+// Parameter:    IN PTHREAD Thread
+//*****************************************************************************
+void
+ThreadRecomputePriority(
+    INOUT_OPT      PTHREAD     Thread
+    );

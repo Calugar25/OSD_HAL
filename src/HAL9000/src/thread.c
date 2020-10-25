@@ -660,7 +660,77 @@ ThreadSetPriority(
 {
     ASSERT(ThreadPriorityLowest <= NewPriority && NewPriority <= ThreadPriorityMaximum);
 
-    GetCurrentThread()->Priority = NewPriority;
+    GetCurrentThread()->RealPriority = NewPriority;
+    if(GetCurrentThread()->RealPriority > GetCurrentThread()->Priority)
+        GetCurrentThread()->Priority = NewPriority;
+}
+
+void
+ThreadDonatePriority(
+    IN      PTHREAD     DonorThread,
+    INOUT      PTHREAD     DoneeThread
+    )
+{
+    PTHREAD mutexHolder = NULL;
+    PTHREAD currentThread;
+    DWORD maxDepth = 8;
+
+    ASSERT(DonorThread != NULL);
+    ASSERT(DoneeThread != NULL);
+
+    if (ThreadGetPriority(DonorThread) > ThreadGetPriority(DoneeThread))
+        DoneeThread->Priority = DonorThread->Priority;
+
+    currentThread = DoneeThread;
+    if(DoneeThread->WaitedMutex != NULL)
+        mutexHolder = DoneeThread->WaitedMutex->Holder;
+
+    while (mutexHolder != NULL && maxDepth > 0)
+    {
+        if (ThreadGetPriority(currentThread) > ThreadGetPriority(mutexHolder))
+            mutexHolder->Priority = currentThread->Priority;
+        currentThread = mutexHolder;
+        if (currentThread->WaitedMutex != NULL)
+            mutexHolder = currentThread->WaitedMutex->Holder;
+        else
+            mutexHolder = NULL;
+    }
+}
+
+
+void
+ThreadRecomputePriority(
+    INOUT_OPT      PTHREAD     Thread
+    )
+{
+    PTHREAD pThread = (NULL != Thread) ? Thread : GetCurrentThread();
+    THREAD_PRIORITY maximumPriority;
+
+    if (NULL != pThread)
+    {
+        maximumPriority = pThread->RealPriority;
+        LIST_ITERATOR it_AcquiredMutexesList;
+        ListIteratorInit(&pThread->AcquiredMutexesList, &it_AcquiredMutexesList);
+        PLIST_ENTRY pAqcuiredMutexesListEntry;
+
+        while ((pAqcuiredMutexesListEntry = ListIteratorNext(&it_AcquiredMutexesList)) != NULL)
+        {
+            PMUTEX pMutex = CONTAINING_RECORD(pAqcuiredMutexesListEntry, MUTEX, AcquiredMutexListElem);
+            LIST_ITERATOR it_MutexWaitingList;
+            ListIteratorInit(&pMutex->WaitingList, &it_MutexWaitingList);
+            PLIST_ENTRY pWaitingListEntry;
+
+            while ((pWaitingListEntry = ListIteratorNext(&it_MutexWaitingList)) != NULL)
+            {
+                PTHREAD pCurrentThread = CONTAINING_RECORD(pWaitingListEntry, THREAD, ReadyList);
+                if (maximumPriority < ThreadGetPriority(pCurrentThread))
+                {
+                    maximumPriority = ThreadGetPriority(pCurrentThread);
+                }
+            }
+        }
+        pThread->Priority = maximumPriority;
+    }
 }
 
 STATUS
@@ -793,6 +863,12 @@ _ThreadInit(
         pThread->Id = _ThreadSystemGetNextTid();
         pThread->State = ThreadStateBlocked;
         pThread->Priority = Priority;
+        //setting real priority = effective priority at creation
+        pThread->RealPriority = Priority;
+        //initialize AcquiredMutexesList
+        InitializeListHead(&pThread->AcquiredMutexesList);
+        //initializing WaitedMutex to NULL on creation
+        pThread->WaitedMutex = NULL;
 
         LockInit(&pThread->BlockLock);
 
