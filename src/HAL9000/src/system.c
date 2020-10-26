@@ -21,7 +21,8 @@
 #include "ex_system.h"
 #include "process_internal.h"
 #include "boot_module.h"
-#include "ex_timer.c"
+#include "ex_timer.h"
+
 
 #define NO_OF_TSS_STACKS             7
 STATIC_ASSERT(NO_OF_TSS_STACKS <= NO_OF_IST);
@@ -35,14 +36,7 @@ static SYSTEM_DATA m_systemData;
 
 QWORD gVirtualToPhysicalOffset;
 
-struct _GLOBAL_TIMER_LIST
-{
-	// protect the global timer list
-	LOCK TimerListLock;
-	// the list ’s head
-	LIST_ENTRY TimerListHead;
 
-};
 
 //static struct _GLOBAL_TIMER_LIST m_globalTimerList;
 

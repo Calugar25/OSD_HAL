@@ -2,6 +2,8 @@
 
 #include "ex_event.h"
 
+void ExTimerSystemPreinit();
+
 typedef enum _EX_TIMER_TYPE
 {
     ExTimerTypeAbsolute,
@@ -10,6 +12,15 @@ typedef enum _EX_TIMER_TYPE
     ExTimerTypeMax = ExTimerTypeRelativePeriodic
 } EX_TIMER_TYPE;
 
+
+ typedef struct _GLOBAL_TIMER_LIST
+{
+	// protect the global timer list
+	LOCK TimerListLock;
+	// the list ’s head
+	LIST_ENTRY TimerListHead;
+
+} GLOBAL_TIMER_LIST;
 
 
 typedef struct _EX_TIMER
@@ -126,3 +137,6 @@ ExTimerCompareTimers(
     IN      PEX_TIMER     FirstElem,
     IN      PEX_TIMER     SecondElem
     );
+
+
+void ExTimerCheckAll();

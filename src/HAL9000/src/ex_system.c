@@ -4,6 +4,7 @@
 #include "ex_timer.h"
 #include "iomu.h"
 
+
 void ExTimerCheck(
 	IN 	PEX_TIMER Timer
 ) {
@@ -26,5 +27,7 @@ ExSystemTimerTick(
     void
     )
 {
+	ThreadTick();
 	ExTimerCheckAll();
+	
 }

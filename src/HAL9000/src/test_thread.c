@@ -92,6 +92,7 @@ const THREAD_TEST THREADS_TEST[] =
         _ThreadTestPassContext, (PVOID)TEST_TIMER_RELATIVE_ZERO, NULL, NULL,
         ThreadPriorityDefault, FALSE, TRUE, FALSE},
 
+		/*
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //                                           PRIORITY SCHEDULER TESTS                                             //
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -189,6 +190,7 @@ const THREAD_TEST THREADS_TEST[] =
     {   "TestThreadPriorityDonationChain", TestThreadPriorityDonationChain,
         _ThreadTestPassContext, (PVOID) 7, NULL, NULL,
         ThreadPriorityDefault, FALSE, TRUE, FALSE},
+		*/
 };
 
 const DWORD THREADS_TOTAL_NO_OF_TESTS = ARRAYSIZE(THREADS_TEST);
