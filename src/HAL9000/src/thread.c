@@ -694,6 +694,7 @@ ThreadDonatePriority(
             mutexHolder = currentThread->WaitedMutex->Holder;
         else
             mutexHolder = NULL;
+        maxDepth--;
     }
 }
 
