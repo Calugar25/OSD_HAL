@@ -22,6 +22,10 @@
 #include "process_internal.h"
 #include "boot_module.h"
 
+
+
+
+
 #define NO_OF_TSS_STACKS             7
 STATIC_ASSERT(NO_OF_TSS_STACKS <= NO_OF_IST);
 
@@ -33,6 +37,24 @@ typedef struct _SYSTEM_DATA
 static SYSTEM_DATA m_systemData;
 
 QWORD gVirtualToPhysicalOffset;
+
+static
+STATUS
+(__cdecl _CmdIpiCmd)(
+	IN_OPT  PVOID   Context
+	)
+{
+	PCPU* pCpu;
+
+	ASSERT(NULL == Context);
+
+	pCpu = GetCurrentPcpu();
+	ASSERT(NULL != pCpu);
+
+	printf("Hello from CPU 0x%02x [0x%02x]\n", pCpu->ApicId, pCpu->LogicalApicId);
+
+	return STATUS_SUCCESS;
+}
 
 void
 SystemPreinit(
@@ -57,6 +79,18 @@ SystemPreinit(
     CorePreinit();
     NetworkStackPreinit();
     ProcessSystemPreinit();
+}
+
+static
+STATUS
+(__cdecl _HelloIpi)(
+	IN_OPT PVOID Context
+	)
+{
+	UNREFERENCED_PARAMETER(Context);
+
+	LOGP("Hello\n");
+	return STATUS_SUCCESS;
 }
 
 STATUS
@@ -313,6 +347,13 @@ SystemInit(
     }
 
     LOGL("Network stack successfully initialized\n");
+
+	status = SmpSendGenericIpi(_CmdIpiCmd, NULL, NULL, NULL, FALSE);
+	if (!SUCCEEDED(status))
+	{
+		LOG_FUNC_ERROR("SmpSendGenericIpi", status);
+		return status;
+	}
 
     return status;
 }
