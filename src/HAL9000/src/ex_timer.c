@@ -17,27 +17,25 @@ void ExTimerSystemPreinit()
 }
 
 
-INT64(__cdecl ExTimerCompareListElement) (PLIST_ENTRY entry1, PLIST_ENTRY entry2, PVOID arg) {
+INT64
+(__cdecl ExTimerCompareListElement) (PLIST_ENTRY timer1, PLIST_ENTRY timer2, PVOID arg) {
 
 	UNREFERENCED_PARAMETER(arg);
-	PEX_TIMER pTimer1 = CONTAINING_RECORD(entry1, EX_TIMER, TimerListElem);
-	PEX_TIMER pTimer2 = CONTAINING_RECORD(entry2, EX_TIMER, TimerListElem);
+	PEX_TIMER pTimer1 = CONTAINING_RECORD(timer1, EX_TIMER, TimerListElem);
+	PEX_TIMER pTimer2 = CONTAINING_RECORD(timer2, EX_TIMER, TimerListElem);
 	return ExTimerCompareTimers(pTimer1, pTimer2);
 }
 
 
 
 void
-Example(
+ExTimerUninitwihtoutLock(
 	INOUT   PEX_TIMER       Timer
 )
 {
 	ASSERT(Timer != NULL);
 
-	//a) acquire the lock that protects the global timer list (calling LockAcquire()
-
-	//RemoveEntryList(&Timer->TimerListElem);
-
+	RemoveEntryList(&Timer->TimerListElem);
 	ExTimerStop(Timer);
 
 	Timer->TimerUninited = TRUE;
@@ -46,32 +44,29 @@ Example(
 
 STATUS CheckforEachOne(PLIST_ENTRY ListEntry, PVOID Context)
 {
-	UNREFERENCED_PARAMETER(Context);
+	
 	PEX_TIMER thisTimer = CONTAINING_RECORD(ListEntry, EX_TIMER, TimerListElem);
 
-	QWORD time = IomuGetSystemTimeUs();
+	UNREFERENCED_PARAMETER(Context);
 
-	if (thisTimer->TriggerTimeUs <= time)
+	if (thisTimer->TriggerTimeUs <= IomuGetSystemTimeUs())
 	{
 
 		if (thisTimer->Type == ExTimerTypeRelativePeriodic)
 		{
 			ExEventSignal(&thisTimer->TimerEvent);
-			ExEventClearSignal(&thisTimer->TimerEvent);
-			thisTimer->TriggerTimeUs = time + thisTimer->ReloadTimeUs;
+
+			
+			thisTimer->TriggerTimeUs = IomuGetSystemTimeUs() + thisTimer->ReloadTimeUs;
 			RemoveEntryList(ListEntry);
 
 			InsertOrderedList(&m_globalTimerList.TimerListHead, &thisTimer->TimerListElem, ExTimerCompareListElement, NULL);
 
 		}
 		else {
-		//INTR_STATE state=*((INTR_STATE*) Context);
-		Example(thisTimer);
+	
+		ExTimerUninitwihtoutLock(thisTimer);
 		RemoveEntryList(ListEntry);
-		//LockRelease(&m_globalTimerList.TimerListLock, state);
-		
-		//LockAcquire(&m_globalTimerList.TimerListLock,&state);
-
 		}
 
 		return STATUS_SUCCESS;
@@ -98,16 +93,12 @@ STATUS CheckforEachOne(PLIST_ENTRY ListEntry, PVOID Context)
 void ExTimerCheckAll()
 {
 	INTR_STATE state;
-	//INTR_STATE oldState;
 
-	//oldState = CpuIntrDisable();
 	LockAcquire(&m_globalTimerList.TimerListLock, &state);
 
 	ForEachElementExecute(&m_globalTimerList.TimerListHead,CheckforEachOne, 0, TRUE);
 	LockRelease(&m_globalTimerList.TimerListLock, state);
-	//CpuIntrSetState(oldState);
-
-
+	
 }
 
 STATUS
