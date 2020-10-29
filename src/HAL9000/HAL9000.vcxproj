@@ -181,6 +181,7 @@
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="semaphore.c" />
     <ClCompile Include="src\acpi_interface.c" />
     <ClCompile Include="src\acpi_osl.c" />
     <ClCompile Include="src\ap_tramp.c" />
@@ -344,6 +345,7 @@
     <ClInclude Include="headers\os_info.h" />
     <ClInclude Include="headers\print.h" />
     <ClInclude Include="headers\scan_codes.h" />
+    <ClInclude Include="headers\semaphore.h" />
     <ClInclude Include="headers\serial_comm.h" />
     <ClInclude Include="headers\smp.h" />
     <ClInclude Include="headers\synch.h" />
