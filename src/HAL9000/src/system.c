@@ -21,6 +21,7 @@
 #include "ex_system.h"
 #include "process_internal.h"
 #include "boot_module.h"
+#include "rtc.h"
 
 
 
@@ -87,9 +88,11 @@ STATUS
 	IN_OPT PVOID Context
 	)
 {
-	UNREFERENCED_PARAMETER(Context);
+	PQWORD timerCount = (PQWORD)Context;
+	
+	LOGP(" this cpu got thhe time %u\n", timerCount[0]);
 
-	LOGP("Hello\n");
+	timerCount[GetCurrentPcpu()->ApicId]= RtcGetTickCount();
 	return STATUS_SUCCESS;
 }
 
@@ -347,13 +350,43 @@ SystemInit(
     }
 
     LOGL("Network stack successfully initialized\n");
+	/*print only for odd cpus 
+	DWORD activeCpus=SmpGetNumberOfActiveCpus();
+	LOG("THIS IS the number of active cpus %d\n", activeCpus);
+	SMP_DESTINATION dest = { 10 };
+	
+	status = SmpSendGenericIpiEx(_HelloIpi, NULL, NULL, NULL, TRUE, SmpIpiSendToGroup ,dest);
+	
+	*/
 
-	status = SmpSendGenericIpi(_CmdIpiCmd, NULL, NULL, NULL, FALSE);
-	if (!SUCCEEDED(status))
+	PLIST_ENTRY list;
+
+	
+	SmpGetCpuList(&list);
+
+	DWORD n = ListSize(list);
+	
+	PQWORD timerCount = ExAllocatePoolWithTag(PoolAllocateZeroMemory, n * sizeof(QWORD), HEAP_TEMP_TAG, 0);
+	
+	memzero(timerCount, sizeof(QWORD) * n);
+	timerCount[GetCurrentPcpu()->ApicId] = RtcGetTickCount();
+	status = SmpSendGenericIpi(_HelloIpi, (PVOID)timerCount, NULL, NULL, TRUE);
+
+	
+	LOGP("And this is what a recived back \n");
+	DWORD i = 0;
+	for (i = 1; i < n; i++)
+	{
+		LOGP("This is what a recived : %u \n", timerCount[i]);
+	}
+
+	
+	if (!SUCCEEDED(status))		
 	{
 		LOG_FUNC_ERROR("SmpSendGenericIpi", status);
 		return status;
 	}
+	
 
     return status;
 }
