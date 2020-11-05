@@ -13,14 +13,14 @@ typedef enum _EX_TIMER_TYPE
 } EX_TIMER_TYPE;
 
 
- typedef struct _GLOBAL_TIMER_LIST
+struct _GLOBAL_TIMER_LIST
 {
 	// protect the global timer list
 	LOCK TimerListLock;
 	// the list ’s head
 	LIST_ENTRY TimerListHead;
 
-} GLOBAL_TIMER_LIST;
+};
 
 
 typedef struct _EX_TIMER

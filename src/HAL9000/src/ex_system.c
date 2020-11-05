@@ -5,22 +5,7 @@
 #include "iomu.h"
 
 
-void ExTimerCheck(
-	IN 	PEX_TIMER Timer
-) {
 
-	ASSERT(NULL != Timer);
-
-
-
-	if (IomuGetSystemTimeUs() >= Timer->TriggerTimeUs)
-	{
-		ExEventSignal(&Timer->TimerEvent);
-	}
-
-
-
-}
 
 void
 ExSystemTimerTick(
@@ -29,5 +14,5 @@ ExSystemTimerTick(
 {
 	ThreadTick();
 	ExTimerCheckAll();
-	
+	//ExTimerCheck();
 }

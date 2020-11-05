@@ -5,7 +5,7 @@
 #include "lock_common.h"
 
 
-static  GLOBAL_TIMER_LIST m_globalTimerList;
+static struct _GLOBAL_TIMER_LIST m_globalTimerList;
 
 //PFUNC_CompareFunction ExTimerCompareListElems(PLIST_ENTRY p1, PLIST_ENTRY p2) 
 
@@ -41,54 +41,58 @@ ExTimerUninitwihtoutLock(
 	Timer->TimerUninited = TRUE;
 }
 
+//
+//STATUS CheckforEachOne(PLIST_ENTRY ListEntry, PVOID Context)
+//{
+//	
+//	PEX_TIMER thisTimer = CONTAINING_RECORD(ListEntry, EX_TIMER, TimerListElem);
+//
+//	UNREFERENCED_PARAMETER(Context);
+//
+//	if (thisTimer->TriggerTimeUs <= IomuGetSystemTimeUs())
+//	{
+//
+//		if (thisTimer->Type == ExTimerTypeRelativePeriodic)
+//		{
+//			ExEventSignal(&thisTimer->TimerEvent);
+//
+//			
+//			thisTimer->TriggerTimeUs = IomuGetSystemTimeUs() + thisTimer->ReloadTimeUs;
+//			RemoveEntryList(ListEntry);
+//
+//			InsertOrderedList(&m_globalTimerList.TimerListHead, &thisTimer->TimerListElem, ExTimerCompareListElement, NULL);
+//
+//		}
+//		else {
+//	
+//		ExTimerUninitwihtoutLock(thisTimer);
+//		RemoveEntryList(ListEntry);
+//		}
+//
+//		return STATUS_SUCCESS;
+//	}
+//	return STATUS_UNSUPPORTED;
+//}
 
-STATUS CheckforEachOne(PLIST_ENTRY ListEntry, PVOID Context)
-{
-	
-	PEX_TIMER thisTimer = CONTAINING_RECORD(ListEntry, EX_TIMER, TimerListElem);
 
-	UNREFERENCED_PARAMETER(Context);
-
-	if (thisTimer->TriggerTimeUs <= IomuGetSystemTimeUs())
-	{
-
-		if (thisTimer->Type == ExTimerTypeRelativePeriodic)
-		{
-			ExEventSignal(&thisTimer->TimerEvent);
-
-			
-			thisTimer->TriggerTimeUs = IomuGetSystemTimeUs() + thisTimer->ReloadTimeUs;
-			RemoveEntryList(ListEntry);
-
-			InsertOrderedList(&m_globalTimerList.TimerListHead, &thisTimer->TimerListElem, ExTimerCompareListElement, NULL);
-
-		}
-		else {
-	
-		ExTimerUninitwihtoutLock(thisTimer);
-		RemoveEntryList(ListEntry);
-		}
-
-		return STATUS_SUCCESS;
-	}
-	return STATUS_UNSUPPORTED;
-}
-
-
-/*void ExTimerCheck(
-	IN 	PEX_TIMER Timer
+void 
+ ExTimerCheck(
+	INOUT 	PEX_TIMER Timer
 ) {
 
 	ASSERT(NULL != Timer);
 
-
+	
 
 	if (IomuGetSystemTimeUs() >= Timer->TriggerTimeUs)
 	{
 		ExEventSignal(&Timer->TimerEvent);
+			
 	}
 
-}*/
+	
+}
+
 
 void ExTimerCheckAll()
 {
@@ -96,7 +100,19 @@ void ExTimerCheckAll()
 
 	LockAcquire(&m_globalTimerList.TimerListLock, &state);
 
-	ForEachElementExecute(&m_globalTimerList.TimerListHead,CheckforEachOne, 0, TRUE);
+	LIST_ITERATOR it;
+	
+	ListIteratorInit(&m_globalTimerList.TimerListHead, &it);
+
+	PLIST_ENTRY pEntry;
+	while ((pEntry = ListIteratorNext(&it)) != NULL) {
+
+		PEX_TIMER pTimer = CONTAINING_RECORD(pEntry, EX_TIMER, TimerListElem);
+		if (pTimer->TriggerTimeUs > IomuGetSystemTimeUs())
+			break;
+		else
+			ExTimerCheck(pTimer);
+	}
 	LockRelease(&m_globalTimerList.TimerListLock, state);
 	
 }
@@ -113,17 +129,10 @@ ExTimerInit(
 	INTR_STATE state;
 
 	//ExTimerInit(): add the new timer in the global timer list;
-	ASSERT(NULL != Timer);
+	//ASSERT(NULL != Timer);
 
-	//adding a new timer in the list
-	LockAcquire(&m_globalTimerList.TimerListLock,&state);
-
-	InsertOrderedList(&m_globalTimerList.TimerListHead, &Timer->TimerListElem, ExTimerCompareListElement,NULL );
-
-	LockRelease(&m_globalTimerList.TimerListLock, state);
-	//1. when and how to initialize it;
 	
-	ExEventInit(&Timer->TimerEvent,ExEventTypeNotification,FALSE);
+
 
 
     if (NULL == Timer)
@@ -138,9 +147,22 @@ ExTimerInit(
 
     status = STATUS_SUCCESS;
 
+
+
     memzero(Timer, sizeof(EX_TIMER));
 
     Timer->Type = Type;
+
+	//adding a new timer in the list
+	LockAcquire(&m_globalTimerList.TimerListLock, &state);
+
+	InsertOrderedList(&m_globalTimerList.TimerListHead, &Timer->TimerListElem, ExTimerCompareListElement, NULL);
+
+	LockRelease(&m_globalTimerList.TimerListLock, state);
+	//1. when and how to initialize it;
+
+	ExEventInit(&Timer->TimerEvent, ExEventTypeNotification, FALSE);
+
     if (Timer->Type != ExTimerTypeAbsolute)
     {
         // relative time
@@ -213,10 +235,11 @@ ExTimerWait(
 	//. replacing the busy-waited loop and blocking the waiting thread
 	ExEventWaitForSignal(&Timer->TimerEvent);
 
-    while (IomuGetSystemTimeUs() < Timer->TriggerTimeUs && Timer->TimerStarted)
+    /*while (IomuGetSystemTimeUs() < Timer->TriggerTimeUs && Timer->TimerStarted)
     {
         ThreadYield();
-    }
+    }*/
+
 }
 
 void
@@ -232,6 +255,7 @@ ExTimerUninit(
 	LockAcquire(&m_globalTimerList.TimerListLock, &state);
 	RemoveEntryList(&Timer->TimerListElem);
 	LockRelease(&m_globalTimerList.TimerListLock, state);
+
     ExTimerStop(Timer);
 
     Timer->TimerUninited = TRUE;
