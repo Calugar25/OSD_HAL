@@ -97,7 +97,9 @@ ExEventWaitForSignal(
     while (TRUE != _InterlockedCompareExchange8(&Event->Signaled, newState, TRUE))
     {
         LockAcquire(&Event->EventLock, &dummyState);
-        InsertTailList(&Event->WaitingList, &pCurrentThread->ReadyList);
+        //FOR priority scheduler - adds threads in descending order
+        InsertOrderedList(&Event->WaitingList, &pCurrentThread->ReadyList, ThreadComparePriorityReadyList, NULL);
+        //InsertTailList(&Event->WaitingList, &pCurrentThread->ReadyList);
         ThreadTakeBlockLock();
         LockRelease(&Event->EventLock, dummyState);
         ThreadBlock();

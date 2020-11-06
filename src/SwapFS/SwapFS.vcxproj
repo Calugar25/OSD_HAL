@@ -14,7 +14,7 @@
     <ProjectGuid>{7E91BC80-DF0A-4DCE-9E99-FAA3ACF429B7}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>SwapFS</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>$(WindowsDefaultSDK)</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
