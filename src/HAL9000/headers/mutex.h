@@ -10,6 +10,9 @@ typedef struct _MUTEX
     BYTE                CurrentRecursivityDepth;
     BYTE                MaxRecursivityDepth;
 
+    //For priority donation
+    LIST_ENTRY          AcquiredMutexListElem;
+
     _Guarded_by_(MutexLock)
     LIST_ENTRY          WaitingList;
     struct _THREAD*     Holder;

@@ -39,8 +39,9 @@ MutexAcquire(
     if (pCurrentThread == Mutex->Holder)
     {
         ASSERT( Mutex->CurrentRecursivityDepth < Mutex->MaxRecursivityDepth );
-
         Mutex->CurrentRecursivityDepth++;
+        //add acquired mutex to AcquiredMutexesList
+        InsertTailList(&pCurrentThread->AcquiredMutexesList, &Mutex->AcquiredMutexListElem);
         return;
     }
 
@@ -51,6 +52,10 @@ MutexAcquire(
     {
         Mutex->Holder = pCurrentThread;
         Mutex->CurrentRecursivityDepth = 1;
+        //Mutex is acquired, so WaitedMutex will be set to NULL again
+        pCurrentThread->WaitedMutex = NULL;
+        //add acquired mutex to AcquiredMutexesList
+        InsertTailList(&pCurrentThread->AcquiredMutexesList, &Mutex->AcquiredMutexListElem);
     }
 
     while (Mutex->Holder != pCurrentThread)
@@ -60,12 +65,16 @@ MutexAcquire(
         //InsertTailList(&Mutex->WaitingList, &pCurrentThread->ReadyList);
         ThreadTakeBlockLock();
         LockRelease(&Mutex->MutexLock, dummyState);
+        pCurrentThread->WaitedMutex = Mutex;
+        if (ThreadGetPriority(pCurrentThread) > ThreadGetPriority(Mutex->Holder))
+            ThreadDonatePriority(pCurrentThread, Mutex->Holder);
         ThreadBlock();
         LockAcquire(&Mutex->MutexLock, &dummyState );
     }
+    
 
     _Analysis_assume_lock_acquired_(*Mutex);
-
+    
     LockRelease(&Mutex->MutexLock, dummyState);
 
     CpuIntrSetState(oldState);
@@ -86,6 +95,8 @@ MutexRelease(
 
     if (Mutex->CurrentRecursivityDepth > 1)
     {
+        //removing mutex from AcquiredMutexesList of Mutex->Holder 
+        RemoveHeadList(&Mutex->Holder->AcquiredMutexesList);
         Mutex->CurrentRecursivityDepth--;
         return;
     }
@@ -93,6 +104,10 @@ MutexRelease(
     pEntry = NULL;
 
     LockAcquire(&Mutex->MutexLock, &oldState);
+
+    //removing mutex from AcquiredMutexesList of Mutex->Holder 
+    RemoveHeadList(&Mutex->Holder->AcquiredMutexesList);
+    ThreadRecomputePriority(Mutex->Holder);
 
     pEntry = RemoveHeadList(&Mutex->WaitingList);
     if (pEntry != &Mutex->WaitingList)
