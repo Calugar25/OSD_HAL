@@ -68,6 +68,12 @@ SyscallHandler(
             status = SyscallValidateInterface((SYSCALL_IF_VERSION)*pSyscallParameters);
             break;
         // STUDENT TODO: implement the rest of the syscalls
+		case SyscallIdFileWrite:
+			status = SyscallFileWrite((UM_HANDLE)pSyscallParameters[0], (PVOID)pSyscallParameters[1], (QWORD)pSyscallParameters[2], (QWORD*)pSyscallParameters[3]);
+			break;
+		case SyscallIdProcessExit:
+			SyscallProcessExit((STATUS)*pSyscallParameters);
+			break;
         default:
             LOG_ERROR("Unimplemented syscall called from User-space!\n");
             status = STATUS_UNSUPPORTED;
@@ -168,5 +174,49 @@ SyscallValidateInterface(
 
     return STATUS_SUCCESS;
 }
+
+
+STATUS
+SyscallFileWrite(
+	IN  UM_HANDLE                   FileHandle,
+	OUT_WRITES_BYTES(BytesToRead)
+	PVOID                       Buffer,
+	IN  QWORD                       BytesToRead,
+	OUT QWORD* BytesRead
+)
+{
+
+	if (FileHandle == UM_FILE_HANDLE_STDOUT)
+	{
+		if (STATUS_SUCCESS == MmuIsBufferValid(Buffer, sizeof(Buffer), PAGE_RIGHTS_READ, GetCurrentProcess()))
+		{
+			*BytesRead = BytesToRead;
+			LOG_TRACE("[%s]:[%s]\n", ProcessGetName(NULL), Buffer);
+			
+		}
+		else {
+			*BytesRead = 0;
+			return STATUS_UNSUCCESSFUL;
+		}
+	}
+	else {
+		*BytesRead = 0;
+		return STATUS_UNSUCCESSFUL;
+
+	}
+	 return STATUS_SUCCESS;
+}
+
+
+STATUS
+SyscallProcessExit(
+	IN      STATUS                  ExitStatus
+)
+{
+	UNREFERENCED_PARAMETER(ExitStatus);
+	ProcessTerminate(GetCurrentProcess());
+	return STATUS_SUCCESS;
+}
+
 
 // STUDENT TODO: implement the rest of the syscalls
