@@ -57,31 +57,14 @@ SpinlockTryAcquire(
     OUT         INTR_STATE*     IntrState
     )
 {
-    PVOID pCurrentCpu;
-
     BOOLEAN acquired;
 
-    ASSERT(NULL != Lock);
-    ASSERT(NULL != IntrState);
-
     *IntrState = CpuIntrDisable();
-
-    pCurrentCpu = CpuGetCurrent();
 
     acquired = (LOCK_FREE == _InterlockedCompareExchange8(&Lock->State, LOCK_TAKEN, LOCK_FREE));
     if (!acquired)
     {
         CpuIntrSetState(*IntrState);
-    }
-    else
-    {
-        ASSERT(NULL == Lock->FunctionWhichTookLock);
-        ASSERT(NULL == Lock->Holder);
-
-        Lock->Holder = pCurrentCpu;
-        Lock->FunctionWhichTookLock = *((PVOID*)_AddressOfReturnAddress());
-
-        ASSERT(LOCK_TAKEN == Lock->State);
     }
 
     return acquired;

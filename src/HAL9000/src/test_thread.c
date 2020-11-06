@@ -103,27 +103,27 @@ const THREAD_TEST THREADS_TEST[] =
         TestThreadPrepareWakeupEvent, NULL, TestThreadPostCreateWakeup, TestThreadPostFinishWakeup,
         ThreadPriorityLowest, TRUE, FALSE, FALSE},
 
-    // Same as "TestThreadPriorityWakeup" except MUTEXes are used instead of EX_EVENTs
+    //// Same as "TestThreadPriorityWakeup" except MUTEXes are used instead of EX_EVENTs
     {   "TestThreadPriorityMutex", TestThreadPriorityMutex,
         TestPrepareMutex, (PVOID)TRUE, TestThreadPostCreateMutex, TestThreadPostFinishMutex,
         ThreadPriorityLowest, TRUE, FALSE, FALSE},
 
-    // Spawns a highest priority thread and validates that the thread is not de-scheduled even if it tries to yield
-    // the CPU using the ThreadYield() function.
+    //// Spawns a highest priority thread and validates that the thread is not de-scheduled even if it tries to yield
+    //// the CPU using the ThreadYield() function.
     {   "TestThreadPriorityYield", TestThreadPriorityExecution,
         TestThreadPreparePriorityExecution, (PVOID) FALSE, NULL, TestThreadPostPriorityExecution,
         ThreadPriorityMaximum, FALSE, TRUE, FALSE},
 
-    // Spawns multiple threads (default 16) with highest priority and validates that each thread is relinquishes
-    // the CPU in a round-robin fashion when callin the ThreadYield() function (i.e. all threads with the same priority
-    // should be scheduled equally).
+    //// Spawns multiple threads (default 16) with highest priority and validates that each thread is relinquishes
+    //// the CPU in a round-robin fashion when callin the ThreadYield() function (i.e. all threads with the same priority
+    //// should be scheduled equally).
     {   "TestThreadPriorityRoundRobin", TestThreadPriorityExecution,
         TestThreadPreparePriorityExecution, (PVOID) TRUE, NULL, TestThreadPostPriorityExecution,
         ThreadPriorityMaximum, FALSE, FALSE, FALSE},
 
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    //                                            PRIORITY DONATION TESTS                                             //
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    ////                                            PRIORITY DONATION TESTS                                             //
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     // 1. A default priority thread is spawned
     // 2. The default priority thread initializes and acquires a mutex
