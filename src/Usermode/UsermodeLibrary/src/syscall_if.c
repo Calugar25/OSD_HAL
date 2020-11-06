@@ -2,6 +2,8 @@
 #include "syscall_if.h"
 #include "syscall_no.h"
 
+
+
 extern
 STATUS
 SyscallEntry(
@@ -185,6 +187,9 @@ SyscallFileRead(
 }
 
 // SyscallIdFileWrite
+
+
+
 STATUS
 SyscallFileWrite(
     IN  UM_HANDLE                   FileHandle,
@@ -196,3 +201,5 @@ SyscallFileWrite(
 {
     return SyscallEntry(SyscallIdFileWrite, FileHandle, Buffer, BytesToWrite, BytesWritten);
 }
+
+
