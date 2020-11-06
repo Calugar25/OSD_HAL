@@ -9,6 +9,8 @@
 #include "isr.h"
 #include "gdtmu.h"
 #include "pe_exports.h"
+#include <smp.h>
+
 
 #define TID_INCREMENT               4
 
@@ -38,7 +40,14 @@ typedef struct _THREAD_SYSTEM_DATA
 
     _Guarded_by_(ReadyThreadsLock)
     LIST_ENTRY          ReadyThreadsList;
+
 	volatile DWORD AllThreadsCount;
+
+
+    _Guarded_by_(ReadyThreadsLock)
+    THREAD_PRIORITY     RunningThreadsMinPriority;
+
+
 } THREAD_SYSTEM_DATA, *PTHREAD_SYSTEM_DATA;
 
 static THREAD_SYSTEM_DATA m_threadSystemData;
@@ -152,7 +161,11 @@ ThreadSystemPreinit(
 
     InitializeListHead(&m_threadSystemData.ReadyThreadsList);
     LockInit(&m_threadSystemData.ReadyThreadsLock);
+
 	m_threadSystemData.AllThreadsCount = 0;
+
+    m_threadSystemData.RunningThreadsMinPriority = ThreadPriorityMaximum;
+
 }
 
 STATUS
@@ -284,6 +297,8 @@ ThreadCreate(
                           Thread,
                           ProcessRetrieveSystemProcess());
 }
+
+
 
 STATUS
 ThreadCreateEx(
@@ -486,7 +501,10 @@ ThreadYield(
     LockAcquire(&m_threadSystemData.ReadyThreadsLock, &dummyState);
     if (pThread != pCpu->ThreadData.IdleThread)
     {
-        InsertTailList(&m_threadSystemData.ReadyThreadsList, &pThread->ReadyList);
+        
+        //FOR priority scheduler - adds threads in descending order
+        InsertOrderedList(&m_threadSystemData.ReadyThreadsList, &pThread->ReadyList, ThreadComparePriorityReadyList, NULL);
+        //InsertTailList(&m_threadSystemData.ReadyThreadsList, &pThread->ReadyList);
     }
     if (!bForcedYield)
     {
@@ -526,6 +544,18 @@ ThreadBlock(
     ASSERT( !LockIsOwner(&m_threadSystemData.ReadyThreadsLock));
 }
 
+STATUS
+(__cdecl ThreadYieldForIpi)
+(
+    IN_OPT  PVOID   Context
+    )
+{
+    UNREFERENCED_PARAMETER(Context);
+    PPCPU pCurrentCPU = GetCurrentPcpu();
+    pCurrentCPU->ThreadData.YieldOnInterruptReturn = TRUE;
+    return STATUS_SUCCESS;
+}
+
 void
 ThreadUnblock(
     IN      PTHREAD              Thread
@@ -537,15 +567,21 @@ ThreadUnblock(
     ASSERT(NULL != Thread);
 
     LockAcquire(&Thread->BlockLock, &oldState);
-
+    
     ASSERT(ThreadStateBlocked == Thread->State);
 
     LockAcquire(&m_threadSystemData.ReadyThreadsLock, &dummyState);
-    InsertTailList(&m_threadSystemData.ReadyThreadsList, &Thread->ReadyList);
+
+    //InsertTailList(&m_threadSystemData.ReadyThreadsList, &Thread->ReadyList);
+    InsertOrderedList(&m_threadSystemData.ReadyThreadsList, &Thread->ReadyList,ThreadComparePriorityReadyList,NULL);
     Thread->State = ThreadStateReady;
     LockRelease(&m_threadSystemData.ReadyThreadsLock, dummyState );
     LockRelease(&Thread->BlockLock, oldState);
+
+    SMP_DESTINATION dest = { 0 };
+    SmpSendGenericIpiEx(ThreadYieldForIpi, NULL, NULL, NULL, FALSE, SmpIpiSendToAllIncludingSelf, dest);
 }
+
 
 void
 ThreadExit(
@@ -661,14 +697,44 @@ ThreadGetPriority(
     return (NULL != pThread) ? pThread->Priority : 0;
 }
 
+INT64
+(__cdecl ThreadComparePriorityReadyList)(
+    IN PLIST_ENTRY e1,
+    IN PLIST_ENTRY e2,
+    IN_OPT PVOID Context
+    )
+{
+    UNREFERENCED_PARAMETER(Context);
+    PTHREAD pTh1;
+    PTHREAD pTh2;
+    pTh1 = CONTAINING_RECORD(e1, THREAD, ReadyList);
+    pTh2 = CONTAINING_RECORD(e2, THREAD, ReadyList);
+
+    THREAD_PRIORITY prio2 = ThreadGetPriority(pTh2);
+    THREAD_PRIORITY prio1 = ThreadGetPriority(pTh1);
+
+    if (prio1 > prio2) return -1;
+    else if (prio1 == prio2) return 0;
+    else return 1;
+}
+
 void
 ThreadSetPriority(
     IN      THREAD_PRIORITY     NewPriority
-    )
+)
 {
     ASSERT(ThreadPriorityLowest <= NewPriority && NewPriority <= ThreadPriorityMaximum);
 
     GetCurrentThread()->Priority = NewPriority;
+
+    INTR_STATE state;
+
+    LockAcquire(&m_threadSystemData.ReadyThreadsLock, &state);
+    PTHREAD pThreadNext = CONTAINING_RECORD(&m_threadSystemData.ReadyThreadsList, THREAD, ReadyList);
+    LockRelease(&m_threadSystemData.ReadyThreadsLock, state);
+
+    if (ThreadGetPriority(GetCurrentThread()) < ThreadGetPriority(pThreadNext))
+        ThreadYield();
 }
 
 STATUS

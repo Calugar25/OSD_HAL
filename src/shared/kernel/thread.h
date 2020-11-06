@@ -120,3 +120,12 @@ THREAD_PRIORITY
 ThreadGetPriority(
     IN_OPT  PTHREAD             Thread
     );
+
+//**************************************************
+INT64
+(__cdecl ThreadComparePriorityReadyList)
+(
+    IN PLIST_ENTRY     e1,
+    IN PLIST_ENTRY     e2,
+    IN_OPT PVOID           Context
+    );

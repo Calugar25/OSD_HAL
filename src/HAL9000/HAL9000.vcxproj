@@ -14,7 +14,7 @@
     <ProjectGuid>{79A21DCA-19AF-4F8E-9B83-62D7CF504104}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>HAL9000</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>$(WindowsDefaultSDK)</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
