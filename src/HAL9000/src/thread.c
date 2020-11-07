@@ -942,6 +942,18 @@ _ThreadInit(
 		pThread->State = ThreadStateBlocked;
 		pThread->Priority = Priority;
 
+
+		pThread->Id = _ThreadSystemGetNextTid();
+		pThread->State = ThreadStateBlocked;
+		pThread->Priority = Priority;
+		//setting real priority = effective priority at creation
+		pThread->RealPriority = Priority;
+		//initialize AcquiredMutexesList
+		InitializeListHead(&pThread->AcquiredMutexesList);
+		//initializing WaitedMutex to NULL on creation
+		pThread->WaitedMutex = NULL;
+
+
 		
 
 		LockInit(&pThread->BlockLock);
@@ -953,16 +965,6 @@ _ThreadInit(
 		_InterlockedIncrement(&m_threadSystemData.AllThreadsCount);
 	}
 
-
-        pThread->Id = _ThreadSystemGetNextTid();
-        pThread->State = ThreadStateBlocked;
-        pThread->Priority = Priority;
-        //setting real priority = effective priority at creation
-        pThread->RealPriority = Priority;
-        //initialize AcquiredMutexesList
-        InitializeListHead(&pThread->AcquiredMutexesList);
-        //initializing WaitedMutex to NULL on creation
-        pThread->WaitedMutex = NULL;
 
 
     __finally

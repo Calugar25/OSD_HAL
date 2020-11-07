@@ -153,43 +153,43 @@ const THREAD_TEST THREADS_TEST[] =
         _ThreadTestPassContext, (PVOID) TestPriorityDonationMultipleOneThreadPerLock, NULL, NULL,
         ThreadPriorityDefault, FALSE, TRUE, FALSE},
 
-    // Same as "TestThreadPriorityDonationMulti", except the mutexes are released in a different order: the second mutex
-    // acquired is also the second one released and the first mutex acquired is the first one released.
-    {   "TestThreadPriorityDonationMultiInverted", TestThreadPriorityDonationMultiple,
-        _ThreadTestPassContext, (PVOID) TestPriorityDonationMultipleOneThreadPerLockInverseRelease, NULL, NULL,
-        ThreadPriorityDefault, FALSE, TRUE, FALSE},
+    //// Same as "TestThreadPriorityDonationMulti", except the mutexes are released in a different order: the second mutex
+    //// acquired is also the second one released and the first mutex acquired is the first one released.
+    //{   "TestThreadPriorityDonationMultiInverted", TestThreadPriorityDonationMultiple,
+    //    _ThreadTestPassContext, (PVOID) TestPriorityDonationMultipleOneThreadPerLockInverseRelease, NULL, NULL,
+    //    ThreadPriorityDefault, FALSE, TRUE, FALSE},
 
-    // Same as "TestThreadPriorityDonationMulti" except there are now 3 threads waiting on two mutexes. The two higher
-    // priority ones are waiting for the second mutex, while the first spawned thread is waiting on the first mutex.
-    {   "TestThreadPriorityDonationMultiThreads", TestThreadPriorityDonationMultiple,
-        _ThreadTestPassContext, (PVOID)TestPriorityDonationMultipleTwoThreadsPerLock, NULL, NULL,
-        ThreadPriorityDefault, FALSE, TRUE, FALSE},
+    //// Same as "TestThreadPriorityDonationMulti" except there are now 3 threads waiting on two mutexes. The two higher
+    //// priority ones are waiting for the second mutex, while the first spawned thread is waiting on the first mutex.
+    //{   "TestThreadPriorityDonationMultiThreads", TestThreadPriorityDonationMultiple,
+    //    _ThreadTestPassContext, (PVOID)TestPriorityDonationMultipleTwoThreadsPerLock, NULL, NULL,
+    //    ThreadPriorityDefault, FALSE, TRUE, FALSE},
 
-    // Same as "TestThreadPriorityDonationMultiThreads", except the mutexes are released in a different order (as in
-    // the "TestThreadPriorityDonationMultiInverted" test).
-    {   "TestThreadPriorityDonationMultiThreadsInverted", TestThreadPriorityDonationMultiple,
-        _ThreadTestPassContext, (PVOID)TestPriorityDonationMultipleTwoThreadsPerLockInverseRelease, NULL, NULL,
-        ThreadPriorityDefault, FALSE, TRUE, FALSE},
+    //// Same as "TestThreadPriorityDonationMultiThreads", except the mutexes are released in a different order (as in
+    //// the "TestThreadPriorityDonationMultiInverted" test).
+    //{   "TestThreadPriorityDonationMultiThreadsInverted", TestThreadPriorityDonationMultiple,
+    //    _ThreadTestPassContext, (PVOID)TestPriorityDonationMultipleTwoThreadsPerLockInverseRelease, NULL, NULL,
+    //    ThreadPriorityDefault, FALSE, TRUE, FALSE},
 
-    // The main thread with ThreadPriorityDefault initializes 4 mutexes and acquires the first one (i.e. Mutex[0]). It
-    // then spawns 3 additional threads T[i]: each with priority ThreadPriorityDefault + i (where i is from 1 to 3).
-    // Each thread will acquire Mutex[i] and Mutex[i+1%4], i.e.:
-    // T[1] takes Mutex[1] and then tries to take Mutex[0]
-    // T[2] takes Mutex[2] and then tries to take Mutex[1]
-    // T[3] takes Mutex[3] and then tries to take Mutex[2]
+    //// The main thread with ThreadPriorityDefault initializes 4 mutexes and acquires the first one (i.e. Mutex[0]). It
+    //// then spawns 3 additional threads T[i]: each with priority ThreadPriorityDefault + i (where i is from 1 to 3).
+    //// Each thread will acquire Mutex[i] and Mutex[i+1%4], i.e.:
+    //// T[1] takes Mutex[1] and then tries to take Mutex[0]
+    //// T[2] takes Mutex[2] and then tries to take Mutex[1]
+    //// T[3] takes Mutex[3] and then tries to take Mutex[2]
 
-    // As a result of these operations the main thread will receive T[1]'s priority because it holds Mutex[0].
-    // T[1] also receives T[2]'s priority because it holds Mutex[1] and as a result T[2]'s priority will be donated to
-    // the main thread.
-    // The same happens for T[2]...
-    {   "TestThreadPriorityDonationNest", TestThreadPriorityDonationChain,
-        _ThreadTestPassContext, (PVOID) 3, NULL, NULL,
-        ThreadPriorityDefault, FALSE, TRUE, FALSE},
+    //// As a result of these operations the main thread will receive T[1]'s priority because it holds Mutex[0].
+    //// T[1] also receives T[2]'s priority because it holds Mutex[1] and as a result T[2]'s priority will be donated to
+    //// the main thread.
+    //// The same happens for T[2]...
+    //{   "TestThreadPriorityDonationNest", TestThreadPriorityDonationChain,
+    //    _ThreadTestPassContext, (PVOID) 3, NULL, NULL,
+    //    ThreadPriorityDefault, FALSE, TRUE, FALSE},
 
-    // Same scenario as in "TestThreadPriorityDonationNest", except the number of additional threads is 7.
-    {   "TestThreadPriorityDonationChain", TestThreadPriorityDonationChain,
-        _ThreadTestPassContext, (PVOID) 7, NULL, NULL,
-        ThreadPriorityDefault, FALSE, TRUE, FALSE},
+    //// Same scenario as in "TestThreadPriorityDonationNest", except the number of additional threads is 7.
+    //{   "TestThreadPriorityDonationChain", TestThreadPriorityDonationChain,
+    //    _ThreadTestPassContext, (PVOID) 7, NULL, NULL,
+    //    ThreadPriorityDefault, FALSE, TRUE, FALSE},
 		
 };
 
