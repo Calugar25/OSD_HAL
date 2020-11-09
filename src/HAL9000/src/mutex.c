@@ -1,6 +1,7 @@
 #include "HAL9000.h"
 #include "thread_internal.h"
 #include "mutex.h"
+#include "list.h"
 
 #define MUTEX_MAX_RECURSIVITY_DEPTH         MAX_BYTE
 
@@ -51,11 +52,7 @@ MutexAcquire(
     if (NULL == Mutex->Holder)
     {
         Mutex->Holder = pCurrentThread;
-        Mutex->CurrentRecursivityDepth = 1;
-        //Mutex is acquired, so WaitedMutex will be set to NULL again
-        pCurrentThread->WaitedMutex = NULL;
-        //add acquired mutex to AcquiredMutexesList
-        InsertTailList(&pCurrentThread->AcquiredMutexesList, &Mutex->AcquiredMutexListElem);
+        Mutex->CurrentRecursivityDepth = 1;    
     }
 
     while (Mutex->Holder != pCurrentThread)
@@ -71,8 +68,11 @@ MutexAcquire(
         ThreadBlock();
         LockAcquire(&Mutex->MutexLock, &dummyState );
     }
-    
 
+    //Mutex is acquired, so WaitedMutex will be set to NULL again
+    pCurrentThread->WaitedMutex = NULL;
+    //add acquired mutex to AcquiredMutexesList
+    InsertTailList(&pCurrentThread->AcquiredMutexesList, &Mutex->AcquiredMutexListElem);
     _Analysis_assume_lock_acquired_(*Mutex);
     
     LockRelease(&Mutex->MutexLock, dummyState);
@@ -96,7 +96,8 @@ MutexRelease(
     if (Mutex->CurrentRecursivityDepth > 1)
     {
         //removing mutex from AcquiredMutexesList of Mutex->Holder 
-        if (ListSize(&Mutex->Holder->AcquiredMutexesList) > 0)
+       // if (ListSize(&Mutex->Holder->AcquiredMutexesList) > 0)
+        if(!IsListEmpty(&Mutex->Holder->AcquiredMutexesList))
             RemoveEntryList(&Mutex->AcquiredMutexListElem);
         Mutex->CurrentRecursivityDepth--;
         return;
@@ -107,7 +108,8 @@ MutexRelease(
     LockAcquire(&Mutex->MutexLock, &oldState);
 
     //removing mutex from AcquiredMutexesList of Mutex->Holder 
-    if(ListSize(&Mutex->Holder->AcquiredMutexesList) > 0)
+    //if(ListSize(&Mutex->Holder->AcquiredMutexesList) > 0)
+    if (!IsListEmpty(&Mutex->Holder->AcquiredMutexesList))
         RemoveEntryList(&Mutex->AcquiredMutexListElem);
     ThreadRecomputePriority(GetCurrentThread());
 

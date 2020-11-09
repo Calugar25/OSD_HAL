@@ -228,18 +228,22 @@ const THREAD_TEST THREADS_TEST[] =
     // the main thread.
     // The same happens for T[2]...
     // KERNEL PANIC, BUT PASSES SOMEHOW
-    /*{   "TestThreadPriorityDonationNest", TestThreadPriorityDonationChain,
+    {   "TestThreadPriorityDonationNest", TestThreadPriorityDonationChain,
         _ThreadTestPassContext, (PVOID) 3, NULL, NULL,
-        ThreadPriorityDefault, FALSE, TRUE, FALSE},*/
+        ThreadPriorityDefault, FALSE, TRUE, FALSE},
 
     // Same scenario as in "TestThreadPriorityDonationNest", except the number of additional threads is 7.
-    // POSSIBLE DEADLOCK, BUT PASSES SOMEHOW
-   /*{   "TestThreadPriorityDonationChain", TestThreadPriorityDonationChain,
+    // KERNEL PANIC, BUT PASSES SOMEHOW
+    {   "TestThreadPriorityDonationChain", TestThreadPriorityDonationChain,
         _ThreadTestPassContext, (PVOID) 7, NULL, NULL,
-        ThreadPriorityDefault, FALSE, TRUE, FALSE},*/
+
+        ThreadPriorityDefault, FALSE, TRUE, FALSE},
+
+
+		ThreadPriorityDefault, FALSE, TRUE, FALSE}
 
 		
-};
+;
 
 const DWORD THREADS_TOTAL_NO_OF_TESTS = ARRAYSIZE(THREADS_TEST);
 
