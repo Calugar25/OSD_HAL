@@ -560,13 +560,13 @@ STATUS
     originalPriority = ThreadGetPriority(NULL);
 
     MutexAcquire(pCtx->FirstMutex);
-    LOG_TEST_LOG("Thread 0x%X got the first lock!\n", tid);
+    LOG_TEST_LOG("Thread 0x%X got the first lock! prio:%u\n", tid, originalPriority);
 
     // mark my presence
     CheckinQueueMarkPresence(&pCtx->SynchronizationContext);
 
     MutexAcquire(pCtx->SecondMutex);
-    LOG_TEST_LOG("Thread 0x%X got the second lock\n", tid);
+    LOG_TEST_LOG("Thread 0x%X got the second lock! prio: %u\n", tid, originalPriority);
 
     if (!_ThreadValidatePriority(pCtx->ExpectedPriority))
     {
