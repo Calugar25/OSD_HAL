@@ -96,7 +96,8 @@ MutexRelease(
     if (Mutex->CurrentRecursivityDepth > 1)
     {
         //removing mutex from AcquiredMutexesList of Mutex->Holder 
-        RemoveHeadList(&Mutex->Holder->AcquiredMutexesList);
+        if (ListSize(&Mutex->Holder->AcquiredMutexesList) > 0)
+            RemoveEntryList(&Mutex->AcquiredMutexListElem);
         Mutex->CurrentRecursivityDepth--;
         return;
     }
@@ -106,8 +107,9 @@ MutexRelease(
     LockAcquire(&Mutex->MutexLock, &oldState);
 
     //removing mutex from AcquiredMutexesList of Mutex->Holder 
-    RemoveHeadList(&Mutex->Holder->AcquiredMutexesList);
-    ThreadRecomputePriority(Mutex->Holder);
+    if(ListSize(&Mutex->Holder->AcquiredMutexesList) > 0)
+        RemoveEntryList(&Mutex->AcquiredMutexListElem);
+    ThreadRecomputePriority(GetCurrentThread());
 
     pEntry = RemoveHeadList(&Mutex->WaitingList);
     if (pEntry != &Mutex->WaitingList)

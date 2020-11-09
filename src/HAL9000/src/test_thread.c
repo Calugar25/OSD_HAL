@@ -100,31 +100,31 @@ const THREAD_TEST THREADS_TEST[] =
     // Spawns multiple threads (default 16) with increasing priorities (from ThreadPriorityLowest to
     // ThreadPriorityLowest + no of threads - 1) and checks to see if the threads waiting for an EX_EVENT are woken
     // up according to their priorities (i.e. the higher priorities threads should be woken up first)
-    {   "TestThreadPriorityWakeup", TestThreadPriorityWakeup,
+   {   "TestThreadPriorityWakeup", TestThreadPriorityWakeup,
         TestThreadPrepareWakeupEvent, NULL, TestThreadPostCreateWakeup, TestThreadPostFinishWakeup,
         ThreadPriorityLowest, TRUE, FALSE, FALSE},
 
-    //// Same as "TestThreadPriorityWakeup" except MUTEXes are used instead of EX_EVENTs
+    // Same as "TestThreadPriorityWakeup" except MUTEXes are used instead of EX_EVENTs
     {   "TestThreadPriorityMutex", TestThreadPriorityMutex,
         TestPrepareMutex, (PVOID)TRUE, TestThreadPostCreateMutex, TestThreadPostFinishMutex,
         ThreadPriorityLowest, TRUE, FALSE, FALSE},
 
-    //// Spawns a highest priority thread and validates that the thread is not de-scheduled even if it tries to yield
-    //// the CPU using the ThreadYield() function.
+    // Spawns a highest priority thread and validates that the thread is not de-scheduled even if it tries to yield
+    // the CPU using the ThreadYield() function.
     {   "TestThreadPriorityYield", TestThreadPriorityExecution,
         TestThreadPreparePriorityExecution, (PVOID) FALSE, NULL, TestThreadPostPriorityExecution,
         ThreadPriorityMaximum, FALSE, TRUE, FALSE},
 
-    //// Spawns multiple threads (default 16) with highest priority and validates that each thread is relinquishes
-    //// the CPU in a round-robin fashion when callin the ThreadYield() function (i.e. all threads with the same priority
-    //// should be scheduled equally).
+    // Spawns multiple threads (default 16) with highest priority and validates that each thread is relinquishes
+    // the CPU in a round-robin fashion when callin the ThreadYield() function (i.e. all threads with the same priority
+    // should be scheduled equally).
     {   "TestThreadPriorityRoundRobin", TestThreadPriorityExecution,
         TestThreadPreparePriorityExecution, (PVOID) TRUE, NULL, TestThreadPostPriorityExecution,
         ThreadPriorityMaximum, FALSE, FALSE, FALSE},
 
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    ////                                            PRIORITY DONATION TESTS                                             //
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //                                            PRIORITY DONATION TESTS                                             //
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     // 1. A default priority thread is spawned
     // 2. The default priority thread initializes and acquires a mutex
@@ -132,6 +132,7 @@ const THREAD_TEST THREADS_TEST[] =
     // 4. The higher priority thread tries to acquire the mutex taken by the lower priority thread and donates its
     //    priority.
     // 5. The default priority thread has now inherited the priority of the newly spawned thread. (THIS IS CHECKED)
+    // WORKS
     {   "TestThreadPriorityDonationOnce", TestThreadPriorityDonationBasic,
         _ThreadTestPassContext, (PVOID) FALSE, NULL, NULL,
         ThreadPriorityDefault, FALSE, TRUE, FALSE},
@@ -139,6 +140,7 @@ const THREAD_TEST THREADS_TEST[] =
     // First, the same steps are taken as in "TestThreadPriorityDonationOnce", then:
     // 6. The initial thread tries to lower its priority to ThreadPriorityLowest. Its priority should still remain the
     //    one of the donators thread. (THIS IS CHECKED)
+    // WORKS
     {   "TestThreadPriorityDonationLower", TestThreadPriorityDonationBasic,
         _ThreadTestPassContext, (PVOID)TRUE, NULL, NULL,
         ThreadPriorityDefault, FALSE, TRUE, FALSE},
@@ -149,9 +151,11 @@ const THREAD_TEST THREADS_TEST[] =
     // after each thread is spawned the main thread receives a priority donation.
     // The main thread then releases the second mutex and validates if its priority is that of the first thread spawned
     // after which it releases the first mutex and validates its priority to be the one with which it started execution.
+    // WORKS
     {   "TestThreadPriorityDonationMulti", TestThreadPriorityDonationMultiple,
         _ThreadTestPassContext, (PVOID) TestPriorityDonationMultipleOneThreadPerLock, NULL, NULL,
         ThreadPriorityDefault, FALSE, TRUE, FALSE},
+
 
     //// Same as "TestThreadPriorityDonationMulti", except the mutexes are released in a different order: the second mutex
     //// acquired is also the second one released and the first mutex acquired is the first one released.
@@ -190,6 +194,50 @@ const THREAD_TEST THREADS_TEST[] =
     //{   "TestThreadPriorityDonationChain", TestThreadPriorityDonationChain,
     //    _ThreadTestPassContext, (PVOID) 7, NULL, NULL,
     //    ThreadPriorityDefault, FALSE, TRUE, FALSE},
+
+    // Same as "TestThreadPriorityDonationMulti", except the mutexes are released in a different order: the second mutex
+    // acquired is also the second one released and the first mutex acquired is the first one released.
+    // WORKS
+    {   "TestThreadPriorityDonationMultiInverted", TestThreadPriorityDonationMultiple,
+        _ThreadTestPassContext, (PVOID) TestPriorityDonationMultipleOneThreadPerLockInverseRelease, NULL, NULL,
+        ThreadPriorityDefault, FALSE, TRUE, FALSE},
+
+    // Same as "TestThreadPriorityDonationMulti" except there are now 3 threads waiting on two mutexes. The two higher
+    // priority ones are waiting for the second mutex, while the first spawned thread is waiting on the first mutex.
+    // WORKS
+    {   "TestThreadPriorityDonationMultiThreads", TestThreadPriorityDonationMultiple,
+        _ThreadTestPassContext, (PVOID)TestPriorityDonationMultipleTwoThreadsPerLock, NULL, NULL,
+        ThreadPriorityDefault, FALSE, TRUE, FALSE},
+
+    // Same as "TestThreadPriorityDonationMultiThreads", except the mutexes are released in a different order (as in
+    // the "TestThreadPriorityDonationMultiInverted" test).
+    // WORKS
+    {   "TestThreadPriorityDonationMultiThreadsInverted", TestThreadPriorityDonationMultiple,
+        _ThreadTestPassContext, (PVOID)TestPriorityDonationMultipleTwoThreadsPerLockInverseRelease, NULL, NULL,
+        ThreadPriorityDefault, FALSE, TRUE, FALSE},
+
+    // The main thread with ThreadPriorityDefault initializes 4 mutexes and acquires the first one (i.e. Mutex[0]). It
+    // then spawns 3 additional threads T[i]: each with priority ThreadPriorityDefault + i (where i is from 1 to 3).
+    // Each thread will acquire Mutex[i] and Mutex[i+1%4], i.e.:
+    // T[1] takes Mutex[1] and then tries to take Mutex[0]
+    // T[2] takes Mutex[2] and then tries to take Mutex[1]
+    // T[3] takes Mutex[3] and then tries to take Mutex[2]
+
+    // As a result of these operations the main thread will receive T[1]'s priority because it holds Mutex[0].
+    // T[1] also receives T[2]'s priority because it holds Mutex[1] and as a result T[2]'s priority will be donated to
+    // the main thread.
+    // The same happens for T[2]...
+    // KERNEL PANIC, BUT PASSES SOMEHOW
+    /*{   "TestThreadPriorityDonationNest", TestThreadPriorityDonationChain,
+        _ThreadTestPassContext, (PVOID) 3, NULL, NULL,
+        ThreadPriorityDefault, FALSE, TRUE, FALSE},*/
+
+    // Same scenario as in "TestThreadPriorityDonationNest", except the number of additional threads is 7.
+    // POSSIBLE DEADLOCK, BUT PASSES SOMEHOW
+   /*{   "TestThreadPriorityDonationChain", TestThreadPriorityDonationChain,
+        _ThreadTestPassContext, (PVOID) 7, NULL, NULL,
+        ThreadPriorityDefault, FALSE, TRUE, FALSE},*/
+
 		
 };
 

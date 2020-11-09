@@ -725,8 +725,6 @@ ThreadSetPriority(
 {
     ASSERT(ThreadPriorityLowest <= NewPriority && NewPriority <= ThreadPriorityMaximum);
 
-    GetCurrentThread()->Priority = NewPriority;
-
     INTR_STATE state;
 
     LockAcquire(&m_threadSystemData.ReadyThreadsLock, &state);
@@ -755,6 +753,7 @@ ThreadDonatePriority(
     ASSERT(DonorThread != NULL);
     ASSERT(DoneeThread != NULL);
 
+   
     if (ThreadGetPriority(DonorThread) > ThreadGetPriority(DoneeThread))
         DoneeThread->Priority = DonorThread->Priority;
 
@@ -797,7 +796,7 @@ ThreadRecomputePriority(
             LIST_ITERATOR it_MutexWaitingList;
             ListIteratorInit(&pMutex->WaitingList, &it_MutexWaitingList);
             PLIST_ENTRY pWaitingListEntry;
-
+            
             while ((pWaitingListEntry = ListIteratorNext(&it_MutexWaitingList)) != NULL)
             {
                 PTHREAD pCurrentThread = CONTAINING_RECORD(pWaitingListEntry, THREAD, ReadyList);
@@ -938,9 +937,15 @@ _ThreadInit(
 
 		strcpy(pThread->Name, Name);
 
-		pThread->Id = _ThreadSystemGetNextTid();
-		pThread->State = ThreadStateBlocked;
-		pThread->Priority = Priority;
+        pThread->Id = _ThreadSystemGetNextTid();
+        pThread->State = ThreadStateBlocked;
+        pThread->Priority = Priority;
+        //setting real priority = effective priority at creation
+        pThread->RealPriority = Priority;
+        //initialize AcquiredMutexesList
+        InitializeListHead(&pThread->AcquiredMutexesList);
+        //initializing WaitedMutex to NULL on creation
+        pThread->WaitedMutex = NULL;
 
 
 		pThread->Id = _ThreadSystemGetNextTid();
