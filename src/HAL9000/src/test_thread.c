@@ -236,14 +236,10 @@ const THREAD_TEST THREADS_TEST[] =
     // KERNEL PANIC, BUT PASSES SOMEHOW
     {   "TestThreadPriorityDonationChain", TestThreadPriorityDonationChain,
         _ThreadTestPassContext, (PVOID) 7, NULL, NULL,
-
         ThreadPriorityDefault, FALSE, TRUE, FALSE},
 
-
-		ThreadPriorityDefault, FALSE, TRUE, FALSE}
-
 		
-;
+};
 
 const DWORD THREADS_TOTAL_NO_OF_TESTS = ARRAYSIZE(THREADS_TEST);
 
