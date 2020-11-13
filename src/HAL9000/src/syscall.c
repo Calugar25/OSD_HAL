@@ -181,29 +181,30 @@ SyscallFileWrite(
 	IN  UM_HANDLE                   FileHandle,
 	OUT_WRITES_BYTES(BytesToRead)
 	PVOID                       Buffer,
-	IN  QWORD                       BytesToRead,
-	OUT QWORD* BytesRead
+	IN  QWORD                       BytesToWrite,
+	OUT QWORD* BytesWritten
 )
 {
 
-	if (FileHandle == UM_FILE_HANDLE_STDOUT)
-	{
-		if (STATUS_SUCCESS == MmuIsBufferValid(Buffer, sizeof(Buffer), PAGE_RIGHTS_READ, GetCurrentProcess()))
-		{
-			*BytesRead = BytesToRead;
-			LOG_TRACE("[%s]:[%s]\n", ProcessGetName(NULL), Buffer);
-			
-		}
-		else {
-			*BytesRead = 0;
-			return STATUS_UNSUCCESSFUL;
-		}
-	}
-	else {
-		*BytesRead = 0;
-		return STATUS_UNSUCCESSFUL;
+	*BytesWritten = 0;
 
+	if (FileHandle != UM_FILE_HANDLE_STDOUT)
+	{
+		return STATUS_UNSUCCESSFUL;
 	}
+
+	STATUS status = MmuIsBufferValid(Buffer, BytesToWrite, PAGE_RIGHTS_READ, GetCurrentProcess());
+
+	if (!SUCCEEDED(status))
+	{
+		return status;
+	}
+
+	MmuIsBufferValid(BytesWritten, sizeof(QWORD), PAGE_RIGHTS_WRITE, GetCurrentProcess());
+
+	LOG_TRACE_USERMODE("[%s]:[%s]\n", ProcessGetName(NULL), Buffer);
+	*BytesWritten = BytesToWrite;
+
 	 return STATUS_SUCCESS;
 }
 
@@ -213,8 +214,9 @@ SyscallProcessExit(
 	IN      STATUS                  ExitStatus
 )
 {
-	UNREFERENCED_PARAMETER(ExitStatus);
-	ProcessTerminate(GetCurrentProcess());
+	PPROCESS process = GetCurrentProcess();
+	process->TerminationStatus = ExitStatus;
+	ProcessTerminate(process);
 	return STATUS_SUCCESS;
 }
 
