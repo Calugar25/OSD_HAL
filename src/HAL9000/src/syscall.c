@@ -7,6 +7,7 @@
 #include "mmu.h"
 #include "process_internal.h"
 #include "dmp_cpu.h"
+#include "thread.h"
 
 extern void SyscallEntry();
 
@@ -73,6 +74,9 @@ SyscallHandler(
 			break;
 		case SyscallIdProcessExit:
 			SyscallProcessExit((STATUS)*pSyscallParameters);
+			break;
+		case SyscallIdThreadExit:
+			status = SyscallThreadExit((STATUS)*pSyscallParameters);
 			break;
         default:
             LOG_ERROR("Unimplemented syscall called from User-space!\n");
@@ -220,5 +224,30 @@ SyscallProcessExit(
 	return STATUS_SUCCESS;
 }
 
+STATUS
+ SyscallThreadExit(
+	IN      STATUS                  ExitStatus
+)
+{
+	ThreadExit(ExitStatus);
+
+	return STATUS_SUCCESS;
+}
+
 
 // STUDENT TODO: implement the rest of the syscalls
+
+STATUS
+ SyscallProcessGetNumberOfPages(
+	OUT     DWORD * PagesCommitted,
+	OUT     DWORD * PagesReserved
+	 )
+{
+	UNREFERENCED_PARAMETER(PagesCommitted);
+	UNREFERENCED_PARAMETER(PagesReserved);
+	
+	//PPROCESS currentProcess = GetCurrentProcess();
+	
+		
+	return STATUS_SUCCESS;
+}

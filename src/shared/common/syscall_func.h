@@ -100,6 +100,13 @@ SyscallProcessExit(
     IN      STATUS                  ExitStatus
     );
 
+
+STATUS
+SyscallProcessGetNumberOfPages(
+	OUT DWORD* PagesCommitted,
+	OUT DWORD* PagesReserved
+
+);
 // SyscallIdProcessCreate
 //******************************************************************************
 // Function:     SyscallProcessCreate
