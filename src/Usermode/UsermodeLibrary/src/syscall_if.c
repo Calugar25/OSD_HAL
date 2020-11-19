@@ -79,6 +79,28 @@ SyscallProcessExit(
     return SyscallEntry(SyscallIdProcessExit, ExitStatus);
 }
 
+
+//SyscallIdReadMemory
+STATUS
+SyscallReadMemory(
+	IN_READS(1)     PBYTE   Address,
+	OUT             PBYTE   ValueRead
+)
+{
+	return SyscallEntry(SyscallIdReadMemory, Address, ValueRead);
+
+}
+//SyscallIdProcessGetNumberOfPages
+STATUS
+SyscallProcessGetNumberOfPages(
+	OUT     DWORD* PagesCommitted,
+	OUT     DWORD* PagesReserved
+)
+{
+	return SyscallEntry(SyscallIdProcessGetNumberOfPages, PagesCommitted, PagesReserved);
+}
+
+
 // SyscallIdProcessCreate
 STATUS
 SyscallProcessCreate(

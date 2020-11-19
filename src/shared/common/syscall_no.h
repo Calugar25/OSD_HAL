@@ -28,5 +28,12 @@ typedef enum _SYSCALL_ID
     SyscallIdFileRead,
     SyscallIdFileWrite,
 
+	//labsyscalls
+	SyscallIdProcessGetNumberOfPages,
+	SyscallIdReadMemory,
+
+	//3. Write a similar system call to write into the memory and try writing into the code area.
+	SyscallIdWriteMemmory,
+
     SyscallIdReserved = SyscallIdFileWrite + 1
 } SYSCALL_ID;

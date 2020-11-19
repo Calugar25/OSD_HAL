@@ -107,6 +107,13 @@ SyscallProcessGetNumberOfPages(
 	OUT DWORD* PagesReserved
 
 );
+
+
+STATUS
+SyscallReadMemory(
+	IN_READS(1)     PBYTE   Address,
+	OUT             PBYTE   ValueRead
+);
 // SyscallIdProcessCreate
 //******************************************************************************
 // Function:     SyscallProcessCreate

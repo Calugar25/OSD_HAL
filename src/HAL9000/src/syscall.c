@@ -8,6 +8,7 @@
 #include "process_internal.h"
 #include "dmp_cpu.h"
 #include "thread.h"
+#include "vmm.h"
 
 extern void SyscallEntry();
 
@@ -78,6 +79,11 @@ SyscallHandler(
 		case SyscallIdThreadExit:
 			status = SyscallThreadExit((STATUS)*pSyscallParameters);
 			break;
+		case SyscallIdReadMemory:
+			
+				status = SyscallReadMemory((PBYTE)pSyscallParameters[0], (PBYTE)pSyscallParameters[1]);
+				break;
+			
         default:
             LOG_ERROR("Unimplemented syscall called from User-space!\n");
             status = STATUS_UNSUPPORTED;
@@ -249,5 +255,25 @@ STATUS
 	//PPROCESS currentProcess = GetCurrentProcess();
 	
 		
+	return STATUS_SUCCESS;
+}
+
+STATUS
+SyscallReadMemory(
+	IN_READS(1)     PBYTE   Address,
+	OUT             PBYTE   ValueRead
+) {
+	//PHYSICAL_ADDRESS pAddress = MmuGetPhysicalAddress((PVOID)Address);
+	UNREFERENCED_PARAMETER(Address);
+	UNREFERENCED_PARAMETER(ValueRead);
+	//if (!_VmIsKernelAddress(Address))
+	//{
+		//Now we read the value at this pAddress 
+		//ValueRead=GetValueAtAddress(pAddress)
+		//Didn't know how exactly i could get that 
+
+		
+
+	//}
 	return STATUS_SUCCESS;
 }

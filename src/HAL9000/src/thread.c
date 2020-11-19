@@ -741,6 +741,8 @@ _ThreadInit(
     ASSERT_INFO(ThreadPriorityLowest <= Priority && Priority <= ThreadPriorityMaximum,
                 "Priority is 0x%x\n", Priority);
 
+	LOG("GHB\n");
+
     status = STATUS_SUCCESS;
     pThread = NULL;
     nameLen = strlen(Name);
