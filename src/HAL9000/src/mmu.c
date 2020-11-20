@@ -588,8 +588,8 @@ MmuMapMemoryEx(
 
     LOG_FUNC_START;
 
-    LOG_TRACE_MMU("Physical address: 0x%X\n", PhysicalAddress);
-    LOG_TRACE_MMU("Size: 0x%x\n", Size);
+   // LOG_TRACE_MMU("Physical address: 0x%X\n", PhysicalAddress);
+    //LOG_TRACE_MMU("Size: 0x%x\n", Size);
 
     // get page-aligned PA and size
     // Unfortunately we cannot consider the PA 0 invalid because we may need to map it at some point (ACPI)
@@ -724,7 +724,7 @@ MmuReleaseMemory(
     LockRelease(&m_mmuData.ZeroThreadData.PagesLock, oldState);
     pItem = NULL;
 
-    LOG_TRACE_MMU("About to signal worker thread\n");
+    //LOG_TRACE_MMU("About to signal worker thread\n");
     ExEventSignal(&m_mmuData.ZeroThreadData.NewPagesEvent);
 
     LOG_FUNC_END_CPU;

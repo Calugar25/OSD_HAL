@@ -20,15 +20,17 @@ SyscallValidateInterface(
     return SyscallEntry(SyscallIdIdentifyVersion, InterfaceVersion);
 }
 
+
 // SyscallIdThreadExit
 STATUS
 SyscallThreadExit(
-    IN  STATUS                      ExitStatus
-    )
+	IN  STATUS                      ExitStatus
+)
 {
 	ThreadExit(ExitStatus);
 	return STATUS_SUCCESS;
 }
+
 
 // SyscallIdThreadCreate
 STATUS

@@ -9,6 +9,7 @@
 #include "dmp_cpu.h"
 #include "thread.h"
 #include "vmm.h"
+#include "thread_internal.h"
 
 extern void SyscallEntry();
 
@@ -83,7 +84,21 @@ SyscallHandler(
 			
 				status = SyscallReadMemory((PBYTE)pSyscallParameters[0], (PBYTE)pSyscallParameters[1]);
 				break;
-			
+		case SyscallIdThreadCreate:
+			status = SyscallThreadCreate((PFUNC_ThreadStart)pSyscallParameters[0], (PVOID)pSyscallParameters[1], (UM_HANDLE*)pSyscallParameters[2]);
+			break;
+		case SyscallIdThreadGetTid:
+			status = SyscallThreadGetTid((UM_HANDLE)pSyscallParameters[0], (TID*)pSyscallParameters[1]);
+			break;
+		case SyscallIdProcessGetPid:
+			status = SyscallProcessGetPid((UM_HANDLE)pSyscallParameters[0], (PID*)pSyscallParameters[1]);
+			break;
+		case SyscallIdThreadWaitForTermination:
+			status =SyscallThreadWaitForTermination((UM_HANDLE)pSyscallParameters[0], (STATUS*)pSyscallParameters[1]);
+			break;
+		case SyscallIdThreadCloseHandle:
+			status = SyscallThreadCloseHandle((UM_HANDLE)*pSyscallParameters);
+			break;
         default:
             LOG_ERROR("Unimplemented syscall called from User-space!\n");
             status = STATUS_UNSUPPORTED;
@@ -277,3 +292,111 @@ SyscallReadMemory(
 	//}
 	return STATUS_SUCCESS;
 }
+
+
+STATUS
+SyscallThreadCreate(
+	IN      PFUNC_ThreadStart       StartFunction,
+	IN_OPT  PVOID                   Context,
+	OUT     UM_HANDLE* ThreadHandle
+)
+{
+	
+	
+	PTHREAD pThread;
+	STATUS status = ThreadCreateEx(
+		"my Thread", ThreadPriorityDefault,
+		StartFunction,
+		Context,
+		&pThread,
+		GetCurrentProcess()
+	);
+
+	
+
+	ThreadHandle = (UM_HANDLE*)pThread;
+	return status;
+}
+
+STATUS
+SyscallThreadGetTid(
+	IN_OPT  UM_HANDLE               ThreadHandle,
+	OUT     TID* ThreadId
+)
+{
+	LOG("OPP");
+	if (ThreadHandle == UM_INVALID_HANDLE_VALUE)
+	{
+		*ThreadId = GetCurrentThread()->Id;
+		return STATUS_SUCCESS;
+	}
+	else {
+		ThreadId = NULL;
+		return STATUS_UNSUCCESSFUL;
+	}
+}
+
+STATUS
+SyscallProcessGetPid(
+	IN_OPT  UM_HANDLE               ProcessHandle,
+	OUT     PID* ProcessId
+)
+{
+
+	LOG("TTY");
+	if (UM_INVALID_HANDLE_VALUE == ProcessHandle)
+	{
+		PPROCESS process = GetCurrentProcess();
+		*ProcessId = process->Id;
+		return STATUS_SUCCESS;
+	}
+	else
+	{
+		ProcessId = NULL;
+		return STATUS_UNSUCCESSFUL;
+	}
+	
+}
+	
+
+STATUS
+SyscallThreadWaitForTermination(
+	IN      UM_HANDLE               ThreadHandle,
+	OUT     STATUS* TerminationStatus
+)
+{
+	STATUS status;
+	if (ThreadHandle != UM_INVALID_HANDLE_VALUE)
+	{
+
+		ThreadWaitForTermination((PTHREAD)ThreadHandle, &status);
+		*TerminationStatus = status;
+
+	}
+	else
+	{
+		status = STATUS_UNSUCCESSFUL;
+		*TerminationStatus = status;
+	}
+	return status;
+}
+
+STATUS
+SyscallThreadCloseHandle(
+	IN      UM_HANDLE               ThreadHandle
+)
+{	
+
+	if (ThreadHandle != UM_INVALID_HANDLE_VALUE)
+	{
+		ThreadCloseHandle((PTHREAD)ThreadHandle);
+		return STATUS_SUCCESS;
+
+	}
+	else {
+		return STATUS_UNSUCCESSFUL;
+	}
+}
+
+
+
