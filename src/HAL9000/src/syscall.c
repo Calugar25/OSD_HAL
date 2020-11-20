@@ -4,9 +4,16 @@
 #include "syscall_defs.h"
 #include "syscall_func.h"
 #include "syscall_no.h"
+#include "mmu.h"
+#include "process_internal.h"
 #include "dmp_cpu.h"
+#include "thread.h"
+#include "vmm.h"
+#include "thread_internal.h"
 
 extern void SyscallEntry();
+
+#define SYSCALL_IF_VERSION_KM       SYSCALL_IMPLEMENTED_IF_VERSION
 
 void
 SyscallHandler(
@@ -15,6 +22,7 @@ SyscallHandler(
 {
     SYSCALL_ID sysCallId;
     PQWORD pSyscallParameters;
+    PQWORD pParameters;
     STATUS status;
     REGISTER_AREA* usermodeProcessorState;
 
@@ -30,6 +38,7 @@ SyscallHandler(
 
     status = STATUS_SUCCESS;
     pSyscallParameters = NULL;
+    pParameters = NULL;
     usermodeProcessorState = &CompleteProcessorState->RegisterArea;
 
     __try
@@ -39,10 +48,61 @@ SyscallHandler(
             DumpProcessorState(CompleteProcessorState);
         }
 
+        // Check if indeed the shadow stack is valid (the shadow stack is mandatory)
+        pParameters = (PQWORD)usermodeProcessorState->RegisterValues[RegisterRbp];
+        status = MmuIsBufferValid(pParameters, SHADOW_STACK_SIZE, PAGE_RIGHTS_READ, GetCurrentProcess());
+        if (!SUCCEEDED(status))
+        {
+            LOG_FUNC_ERROR("MmuIsBufferValid", status);
+            __leave;
+        }
+
         sysCallId = usermodeProcessorState->RegisterValues[RegisterR8];
+
+        LOG_TRACE_USERMODE("System call ID is %u\n", sysCallId);
 
         // The first parameter is the system call ID, we don't care about it => +1
         pSyscallParameters = (PQWORD)usermodeProcessorState->RegisterValues[RegisterRbp] + 1;
+
+        // Dispatch syscalls
+        switch (sysCallId)
+        {
+        case SyscallIdIdentifyVersion:
+            status = SyscallValidateInterface((SYSCALL_IF_VERSION)*pSyscallParameters);
+            break;
+        // STUDENT TODO: implement the rest of the syscalls
+		case SyscallIdFileWrite:
+			status = SyscallFileWrite((UM_HANDLE)pSyscallParameters[0], (PVOID)pSyscallParameters[1], (QWORD)pSyscallParameters[2], (QWORD*)pSyscallParameters[3]);
+			break;
+		case SyscallIdProcessExit:
+			SyscallProcessExit((STATUS)*pSyscallParameters);
+			break;
+		case SyscallIdThreadExit:
+			status = SyscallThreadExit((STATUS)*pSyscallParameters);
+			break;
+		case SyscallIdReadMemory:
+				status = SyscallReadMemory((PBYTE)pSyscallParameters[0], (PBYTE)pSyscallParameters[1]);
+				break;
+		case SyscallIdThreadCreate:
+			status = SyscallThreadCreate((PFUNC_ThreadStart)pSyscallParameters[0], (PVOID)pSyscallParameters[1], (UM_HANDLE*)pSyscallParameters[2]);
+			break;
+		case SyscallIdThreadGetTid:
+			status = SyscallThreadGetTid((UM_HANDLE)pSyscallParameters[0], (TID*)pSyscallParameters[1]);
+			break;
+		case SyscallIdProcessGetPid:
+			status = SyscallProcessGetPid((UM_HANDLE)pSyscallParameters[0], (PID*)pSyscallParameters[1]);
+			break;
+		case SyscallIdThreadWaitForTermination:
+			status =SyscallThreadWaitForTermination((UM_HANDLE)pSyscallParameters[0], (STATUS*)pSyscallParameters[1]);
+			break;
+		case SyscallIdThreadCloseHandle:
+			status = SyscallThreadCloseHandle((UM_HANDLE)*pSyscallParameters);
+			break;
+        default:
+            LOG_ERROR("Unimplemented syscall called from User-space!\n");
+            status = STATUS_UNSUPPORTED;
+            break;
+        }
 
     }
     __finally
@@ -120,4 +180,222 @@ SyscallCpuInit(
 
     LOG_TRACE_USERMODE("Successfully set STAR to 0x%X\n", starMsr.Raw);
 }
+
+// SyscallIdIdentifyVersion
+STATUS
+SyscallValidateInterface(
+    IN  SYSCALL_IF_VERSION          InterfaceVersion
+)
+{
+    LOG_TRACE_USERMODE("Will check interface version 0x%x from UM against 0x%x from KM\n",
+        InterfaceVersion, SYSCALL_IF_VERSION_KM);
+
+    if (InterfaceVersion != SYSCALL_IF_VERSION_KM)
+    {
+        LOG_ERROR("Usermode interface 0x%x incompatible with KM!\n", InterfaceVersion);
+        return STATUS_INCOMPATIBLE_INTERFACE;
+    }
+
+    return STATUS_SUCCESS;
+}
+
+
+STATUS
+SyscallFileWrite(
+	IN  UM_HANDLE                   FileHandle,
+	OUT_WRITES_BYTES(BytesToRead)
+	PVOID                       Buffer,
+	IN  QWORD                       BytesToWrite,
+	OUT QWORD* BytesWritten
+)
+{
+
+	*BytesWritten = 0;
+
+	if (FileHandle != UM_FILE_HANDLE_STDOUT)
+	{
+		return STATUS_UNSUCCESSFUL;
+	}
+
+	STATUS status = MmuIsBufferValid(Buffer, BytesToWrite, PAGE_RIGHTS_READ, GetCurrentProcess());
+
+	if (!SUCCEEDED(status))
+	{
+		return status;
+	}
+
+	MmuIsBufferValid(BytesWritten, sizeof(QWORD), PAGE_RIGHTS_WRITE, GetCurrentProcess());
+
+	LOG_TRACE_USERMODE("[%s]:[%s]\n", ProcessGetName(NULL), Buffer);
+	*BytesWritten = BytesToWrite;
+
+	 return STATUS_SUCCESS;
+}
+
+
+STATUS
+SyscallProcessExit(
+	IN      STATUS                  ExitStatus
+)
+{
+	PPROCESS process = GetCurrentProcess();
+	process->TerminationStatus = ExitStatus;
+	ProcessTerminate(process);
+	return STATUS_SUCCESS;
+}
+
+STATUS
+ SyscallThreadExit(
+	IN      STATUS                  ExitStatus
+)
+{
+	ThreadExit(ExitStatus);
+
+	return STATUS_SUCCESS;
+}
+
+
+// STUDENT TODO: implement the rest of the syscalls
+
+STATUS
+ SyscallProcessGetNumberOfPages(
+	OUT     DWORD * PagesCommitted,
+	OUT     DWORD * PagesReserved
+	 )
+{
+	UNREFERENCED_PARAMETER(PagesCommitted);
+	UNREFERENCED_PARAMETER(PagesReserved);
+	
+	//PPROCESS currentProcess = GetCurrentProcess();
+	
+		
+	return STATUS_SUCCESS;
+}
+
+STATUS
+SyscallReadMemory(
+	IN_READS(1)     PBYTE   Address,
+	OUT             PBYTE   ValueRead
+) {
+	//PHYSICAL_ADDRESS pAddress = MmuGetPhysicalAddress((PVOID)Address);
+	UNREFERENCED_PARAMETER(Address);
+	UNREFERENCED_PARAMETER(ValueRead);
+	//if (!_VmIsKernelAddress(Address))
+	//{
+		//Now we read the value at this pAddress 
+		//ValueRead=GetValueAtAddress(pAddress)
+		//Didn't know how exactly i could get that 
+
+		
+
+	//}
+	return STATUS_SUCCESS;
+}
+
+
+STATUS
+SyscallThreadCreate(
+	IN      PFUNC_ThreadStart       StartFunction,
+	IN_OPT  PVOID                   Context,
+	OUT     UM_HANDLE* ThreadHandle
+)
+{
+	
+	
+	PTHREAD pThread;
+	STATUS status = ThreadCreateEx(
+		"my Thread", ThreadPriorityDefault,
+		StartFunction,
+		Context,
+		&pThread,
+		GetCurrentProcess()
+	);
+
+	
+
+	ThreadHandle = (UM_HANDLE*)pThread;
+	return status;
+}
+
+STATUS
+SyscallThreadGetTid(
+	IN_OPT  UM_HANDLE               ThreadHandle,
+	OUT     TID* ThreadId
+)
+{
+	
+	if (ThreadHandle == UM_INVALID_HANDLE_VALUE)
+	{
+		*ThreadId = GetCurrentThread()->Id;
+		return STATUS_SUCCESS;
+	}
+	else {
+		ThreadId = NULL;
+		return STATUS_UNSUCCESSFUL;
+	}
+}
+
+STATUS
+SyscallProcessGetPid(
+	IN_OPT  UM_HANDLE               ProcessHandle,
+	OUT     PID* ProcessId
+)
+{
+
+
+	if (UM_INVALID_HANDLE_VALUE == ProcessHandle)
+	{
+		PPROCESS process = GetCurrentProcess();
+		*ProcessId = process->Id;
+		return STATUS_SUCCESS;
+	}
+	else
+	{
+		ProcessId = NULL;
+		return STATUS_UNSUCCESSFUL;
+	}
+	
+}
+	
+
+STATUS
+SyscallThreadWaitForTermination(
+	IN      UM_HANDLE               ThreadHandle,
+	OUT     STATUS* TerminationStatus
+)
+{
+	STATUS status;
+	if (ThreadHandle != UM_INVALID_HANDLE_VALUE)
+	{
+
+		ThreadWaitForTermination((PTHREAD)ThreadHandle, &status);
+		*TerminationStatus = status;
+
+	}
+	else
+	{
+		status = STATUS_UNSUCCESSFUL;
+		*TerminationStatus = status;
+	}
+	return status;
+}
+
+STATUS
+SyscallThreadCloseHandle(
+	IN      UM_HANDLE               ThreadHandle
+)
+{	
+
+	if (ThreadHandle != UM_INVALID_HANDLE_VALUE)
+	{
+		ThreadCloseHandle((PTHREAD)ThreadHandle);
+		return STATUS_SUCCESS;
+
+	}
+	else {
+		return STATUS_UNSUCCESSFUL;
+	}
+}
+
+
 
