@@ -70,8 +70,8 @@ SystemInit(
     status = STATUS_SUCCESS;
     pCpu = NULL;
 
-    LogSystemInit(LogLevelInfo,
-                  LogComponentInterrupt | LogComponentIo | LogComponentAcpi|LogComponentGeneric,
+    LogSystemInit(LogLevelTrace,
+		LogComponentUserMode ,
                   TRUE
                   );
 
