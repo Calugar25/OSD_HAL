@@ -27,8 +27,7 @@ SyscallThreadExit(
 	IN  STATUS                      ExitStatus
 )
 {
-	ThreadExit(ExitStatus);
-	return STATUS_SUCCESS;
+	return SyscallEntry(SyscallIdThreadExit, ExitStatus);
 }
 
 

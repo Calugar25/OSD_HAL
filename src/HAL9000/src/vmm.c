@@ -272,8 +272,8 @@ VmmMapMemoryInternal(
 
 	if (!_VmIsKernelAddress(BaseAddress))
 	{
-		LOG("Will map virtual address 0x%X to physical address 0x%X\n",
-			BaseAddress, PhysicalAddress);
+		//LOG("Will map virtual address 0x%X to physical address 0x%X\n",
+		//	BaseAddress, PhysicalAddress);
 	}
     _VmWalkPagingTables(cr3,
                         BaseAddress,
@@ -406,9 +406,9 @@ VmmSetupPageTables(
     PagingData->BasePhysicalAddress = BasePhysicalAddress;
     PagingData->KernelSpace = KernelStructures;
 
-    LOG("Will setup paging tables at physical address: 0x%X\n", PagingData->BasePhysicalAddress);
-    LOG("BaseAddress: 0x%X\n", pBaseVirtualAddress);
-    LOG("Size of paging tables: 0x%x\n", sizeReservedForPagingStructures);
+   // LOG("Will setup paging tables at physical address: 0x%X\n", PagingData->BasePhysicalAddress);
+   // LOG("BaseAddress: 0x%X\n", pBaseVirtualAddress);
+   // LOG("Size of paging tables: 0x%x\n", sizeReservedForPagingStructures);
 
     // 1. We cannot zero the memory before mapping it (because it's not mapped)
     // 2. We cannot zero it after it was mapped because we already have some entries

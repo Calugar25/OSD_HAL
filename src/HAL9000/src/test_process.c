@@ -23,7 +23,7 @@ const PROCESS_TEST PROCESS_TESTS[] =
     { "BadReadIoPort", "BadReadIoPort", NULL},
     { "BadReadKernel", "BadReadKernel", NULL},
     { "BadReadMsr", "BadReadMsr", NULL},
-    { "BadReadNonCanonical", "BadReadNonCanonical", NULL},
+    /*{ "BadReadNonCanonical", "BadReadNonCanonical", NULL},
     { "BadReadNull", "BadReadNull", NULL},
 
     { "BadWriteIoPort", "BadWriteIoPort", NULL},
@@ -52,10 +52,11 @@ const PROCESS_TEST PROCESS_TESTS[] =
     { "FileReadNormal", "FileReadNormal", NULL},
     { "FileReadStdout", "FileReadStdout", NULL},
     { "FileReadZero", "FileReadZero", NULL},
+	*/
 
     // process-syscalls
-    { "ProcessCloseFile", "ProcessCloseFile", NULL},
-    { "ProcessCloseNormal", "ProcessCloseNormal", NULL},
+  { "ProcessCloseFile", "ProcessCloseFile", NULL},
+   { "ProcessCloseNormal", "ProcessCloseNormal", NULL},
     { "ProcessCloseParentHandle", "ProcessCloseParentHandle", NULL},
     { "ProcessCloseTwice", "ProcessCloseTwice", NULL},
 
@@ -74,23 +75,23 @@ const PROCESS_TEST PROCESS_TESTS[] =
     { "ProcessWaitTerminated", "ProcessWaitTerminated", NULL},
 
     // thread-syscalls
-    { "ThreadCloseTwice", "ThreadCloseTwice", NULL},
+   // { "ThreadCloseTwice", "ThreadCloseTwice", NULL},
 
-    { "ThreadCreateBadPointer", "ThreadCreateBadPointer", NULL},
-    { "ThreadCreateMultiple", "ThreadCreateMultiple", NULL},
-    { "ThreadCreateOnce", "ThreadCreateOnce", NULL},
-    { "ThreadCreateWithArguments", "ThreadCreateWithArguments", NULL},
+   // { "ThreadCreateBadPointer", "ThreadCreateBadPointer", NULL},
+   // { "ThreadCreateMultiple", "ThreadCreateMultiple", NULL},
+   // { "ThreadCreateOnce", "ThreadCreateOnce", NULL},
+   // { "ThreadCreateWithArguments", "ThreadCreateWithArguments", NULL},
 
     { "ThreadExit", "ThreadExit", NULL},
     { "ThreadGetTid", "ThreadGetTid", NULL},
-
+	/*
     { "ThreadWaitBadHandle", "ThreadWaitBadHandle", NULL},
     { "ThreadWaitClosedHandle", "ThreadWaitClosedHandle", NULL},
     { "ThreadWaitNormal", "ThreadWaitNormal", NULL},
     { "ThreadWaitTerminated", "ThreadWaitTerminated", NULL},
-
+	
     // Project 3: Virtual Memory
-
+	
     // process-quota
     { "ProcessQuotaGood", "ProcessQuotaGood", NULL},
     { "ProcessQuotaJustRight", "ProcessQuotaJustRight", NULL},
@@ -123,7 +124,8 @@ const PROCESS_TEST PROCESS_TESTS[] =
 
     // stack-growth
     { "StackGrowthVariables", "StackGrowthVariables", NULL },
-    { "StackGrowthRecursiveFunction", "StackGrowthRecursiveFunction", NULL },
+    { "StackGrowthRecursiveFunction", "StackGrowthRecursiveFunction", NULL },*/
+	
 };
 
 const DWORD PROCESS_TOTAL_NO_OF_TESTS = ARRAYSIZE(PROCESS_TESTS);

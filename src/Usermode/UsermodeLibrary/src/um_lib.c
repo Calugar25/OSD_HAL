@@ -19,6 +19,8 @@ __start(
     char**      argv
     )
 {
+
+	LOG("YYY");
     STATUS status;
     COMMON_LIB_INIT libInit;
 
@@ -43,6 +45,7 @@ __start(
 
         // Validate syscall interface
         status = SyscallValidateInterface(SYSCALL_IMPLEMENTED_IF_VERSION);
+		LOG("INCREDIBIL2 %x\n", status);
         if (!SUCCEEDED(status))
         {
             __leave;

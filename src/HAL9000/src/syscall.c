@@ -20,6 +20,8 @@ SyscallHandler(
     INOUT   COMPLETE_PROCESSOR_STATE    *CompleteProcessorState
     )
 {
+
+
     SYSCALL_ID sysCallId;
     PQWORD pSyscallParameters;
     PQWORD pParameters;
@@ -40,6 +42,8 @@ SyscallHandler(
     pSyscallParameters = NULL;
     pParameters = NULL;
     usermodeProcessorState = &CompleteProcessorState->RegisterArea;
+
+	
 
     __try
     {
@@ -64,10 +68,14 @@ SyscallHandler(
         // The first parameter is the system call ID, we don't care about it => +1
         pSyscallParameters = (PQWORD)usermodeProcessorState->RegisterValues[RegisterRbp] + 1;
 
+	
+		
+
         // Dispatch syscalls
         switch (sysCallId)
         {
         case SyscallIdIdentifyVersion:
+			LOG("INCREDIBIL\n");
             status = SyscallValidateInterface((SYSCALL_IF_VERSION)*pSyscallParameters);
             break;
         // STUDENT TODO: implement the rest of the syscalls
@@ -75,7 +83,9 @@ SyscallHandler(
 			status = SyscallFileWrite((UM_HANDLE)pSyscallParameters[0], (PVOID)pSyscallParameters[1], (QWORD)pSyscallParameters[2], (QWORD*)pSyscallParameters[3]);
 			break;
 		case SyscallIdProcessExit:
+	
 			SyscallProcessExit((STATUS)*pSyscallParameters);
+			
 			break;
 		case SyscallIdThreadExit:
 			status = SyscallThreadExit((STATUS)*pSyscallParameters);
@@ -121,14 +131,15 @@ SyscallPreinitSystem(
     void
     )
 {
-
+	
 }
 
 STATUS
 SyscallInitSystem(
     void
     )
-{
+{	
+
     return STATUS_SUCCESS;
 }
 
@@ -137,6 +148,7 @@ SyscallUninitSystem(
     void
     )
 {
+	
     return STATUS_SUCCESS;
 }
 
@@ -239,6 +251,7 @@ SyscallProcessExit(
 	IN      STATUS                  ExitStatus
 )
 {
+	
 	PPROCESS process = GetCurrentProcess();
 	process->TerminationStatus = ExitStatus;
 	ProcessTerminate(process);
@@ -250,6 +263,7 @@ STATUS
 	IN      STATUS                  ExitStatus
 )
 {
+
 	ThreadExit(ExitStatus);
 
 	return STATUS_SUCCESS;
@@ -324,7 +338,7 @@ SyscallThreadGetTid(
 	OUT     TID* ThreadId
 )
 {
-	LOG("OPP");
+	
 	if (ThreadHandle == UM_INVALID_HANDLE_VALUE)
 	{
 		*ThreadId = GetCurrentThread()->Id;
@@ -343,7 +357,7 @@ SyscallProcessGetPid(
 )
 {
 
-	LOG("TTY");
+
 	if (UM_INVALID_HANDLE_VALUE == ProcessHandle)
 	{
 		PPROCESS process = GetCurrentProcess();
