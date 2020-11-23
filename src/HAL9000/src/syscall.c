@@ -474,7 +474,7 @@ SyscallFileCreate(
 				*FileHandle = 22;
 			}
 		}
-		*FileHandle = 0;
+		*FileHandle=0;
 		return STATUS_SUCCESS;
 	}
 

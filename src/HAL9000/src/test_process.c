@@ -81,7 +81,7 @@ const PROCESS_TEST PROCESS_TESTS[] =
    // { "ThreadCreateOnce", "ThreadCreateOnce", NULL},
     //{ "ThreadCreateWithArguments", "ThreadCreateWithArguments", NULL},
 
-  //  { "ThreadExit", "ThreadExit", NULL},
+  { "ThreadExit", "ThreadExit", NULL},
 	/*
     { "ThreadGetTid", "ThreadGetTid", NULL},
 
