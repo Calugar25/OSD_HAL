@@ -1070,6 +1070,93 @@ _ThreadSetupMainThreadUserStack(
 
 static
 STATUS
+_ComputeResultingStack(
+	IN      PVOID           InitialStack,
+	INOUT   PVOID* ResultingStack,
+	IN      PPROCESS        Process
+)
+{
+	PVOID KernelAddr;
+	PVOID CurrentStackKernelAddr;
+	PVOID ArgStack;
+	PVOID ArgvStack;
+	PVOID ArgvKernelAddr;
+	PVOID ArgvUserAddr;
+	char* pChar = NULL;
+	char* pDelim = " ";
+	char* pContext = NULL;
+	//mapping physical mem to kernel
+	MmuGetSystemVirtualAddressForUserBuffer((PVOID)PtrDiff(InitialStack, STACK_DEFAULT_SIZE), STACK_DEFAULT_SIZE, PAGE_RIGHTS_READWRITE, Process, &KernelAddr);
+	//incrementing kernel addr
+	CurrentStackKernelAddr = (PVOID)PtrOffset(KernelAddr, STACK_DEFAULT_SIZE);
+	//alloc mem for args
+	ArgStack = (PVOID)PtrDiff(CurrentStackKernelAddr, (1 + strlen(Process->FullCommandLine)) * sizeof(char));
+	ArgvStack = (PVOID)AlignAddressLower(ArgStack, NATURAL_ALIGNMENT);
+	if (Process->NumberOfArguments % 2 == 0)
+		ArgvStack = (PVOID)PtrDiff(ArgvStack, sizeof(PVOID));
+	//alignment
+	ArgvStack = (PVOID)PtrDiff(ArgvStack, sizeof(PVOID));
+	//alloc mem for arg addr
+	ArgvStack = (PVOID)PtrDiff(ArgvStack, Process->NumberOfArguments * sizeof(PVOID));
+	//setting argv kernel addres to the argv stack
+	ArgvKernelAddr = ArgvStack;
+
+	ArgvUserAddr = (PVOID)PtrDiff(InitialStack, PtrDiff(CurrentStackKernelAddr, ArgvStack));
+	//move alignment 5 spaces up
+	ArgvStack = (PVOID)PtrDiff(ArgvStack, sizeof(PVOID) * 5);
+	//compute the address that will be reurned through reference 
+	*ResultingStack = (PVOID)PtrDiff(InitialStack, PtrDiff(CurrentStackKernelAddr, ArgvStack));
+	//  |                 Dummy RA = 0xDEADC0DE                         |
+	*(QWORD*)ArgvStack = 0xDEADC0DE;
+	ArgvStack = (PVOID)PtrOffset(ArgvStack, sizeof(PVOID));
+	//  |                 argc = N (Process->NumberOfArguments)         |
+	*(QWORD*)ArgvStack = (QWORD)Process->NumberOfArguments;
+	ArgvStack = (PVOID)PtrOffset(ArgvStack, sizeof(PVOID));
+	//  |                 argv = &argv[0]                               |
+	*(QWORD*)ArgvStack = (QWORD)ArgvUserAddr;
+	ArgvStack = (PVOID)PtrOffset(ArgvStack, sizeof(PVOID));
+	//  |                 Dummy 3rd Arg = 0xDEADBEEF                    |
+	*(QWORD*)ArgvStack = (QWORD)0xDEADBEEF;
+	ArgvStack = (PVOID)PtrOffset(ArgvStack, sizeof(PVOID));
+	//  |                 Dummy 4th Arg = 0xDEADBEEF                    |
+	*(QWORD*)ArgvStack = (QWORD)0xDEADBEEF;
+	ArgvStack = (PVOID)PtrOffset(ArgvStack, sizeof(PVOID));
+	//  -----------------------------------------------------------------
+	//  |                 argv[0] = &(Argument 0)                       |
+	//  -----------------------------------------------------------------
+	//  |                          ...                                  |
+	//  -----------------------------------------------------------------
+	//  |                 argv[N-1] = &(Argument N-1)                   |
+	//  -----------------------------------------------------------------
+	//  |                       Argument 0                              |
+	//  -----------------------------------------------------------------
+	//  |                          ...                                  |
+	//  -----------------------------------------------------------------
+	//  |                       Argument N-1                            |
+	//  -----------------------------------------------------------------
+	//LOGL("%d\n", Process->NumberOfArguments);
+	//LOGL("%s\n", Process->FullCommandLine);
+	//return to argv kernel address
+	ArgvStack = ArgvKernelAddr;
+	//get first argument
+	pChar = (char*)strtok_s(Process->FullCommandLine, pDelim, &pContext);
+	while (pChar)
+	{
+		//pAux = pChar;
+		//pAux[strlen(pAux)] = '\0';
+		//put arg on stack
+		memcpy(ArgStack, pChar, (strlen(pChar) + 1) * sizeof(char));
+		*(QWORD*)ArgvStack = (QWORD)PtrDiff(InitialStack, PtrDiff(CurrentStackKernelAddr, ArgStack));
+		ArgvStack = (PVOID)PtrOffset(ArgvStack, sizeof(QWORD));
+		ArgStack = (PVOID)PtrOffset(ArgStack, (strlen(pChar) + 1) * sizeof(char));
+		pChar = (char*)strtok_s(NULL, pDelim, &pContext);
+	}
+	MmuFreeSystemVirtualAddressForUserBuffer(KernelAddr);
+	return STATUS_SUCCESS;
+};
+
+static
+STATUS
 _ThreadSetupMainThreadUserStack(
     IN      PVOID               InitialStack,
     OUT     PVOID*              ResultingStack,
@@ -1082,8 +1169,10 @@ _ThreadSetupMainThreadUserStack(
 
     //*ResultingStack = InitialStack;
 
+	
 
-	*ResultingStack = (PVOID)PtrDiff(InitialStack, SHADOW_STACK_SIZE + sizeof(PVOID));
+	_ComputeResultingStack(InitialStack, ResultingStack, Process);
+	//*ResultingStack = (PVOID)PtrDiff(InitialStack, SHADOW_STACK_SIZE + sizeof(PVOID));
 
     return STATUS_SUCCESS;
 }

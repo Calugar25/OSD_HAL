@@ -10,11 +10,11 @@ const PROCESS_TEST PROCESS_TESTS[] =
     // Project 2: Userprog
 
     // arguments
-   // { "TestUserArgsNone", "Args", NULL},
-  //  { "TestUserArgsOne", "Args", "Argument"},
-  //  { "TestUserArgsMany", "Args", "Johnny is a good kid"},
-   // { "TestUserArgsAll", "Args", "a b c d e f g h i j k l m n o p r s t u v q x y z"},
-/*
+    { "TestUserArgsNone", "Args", NULL},
+   { "TestUserArgsOne", "Args", "Argument"},
+  { "TestUserArgsMany", "Args", "Johnny is a good kid"},
+    { "TestUserArgsAll", "Args", "a b c d e f g h i j k l m n o p r s t u v q x y z"},
+
     // bad-actions
     { "BadJumpKernel", "BadJumpKernel", NULL},
     { "BadJumpNoncanonical", "BadJumpNoncanonical", NULL},
@@ -31,7 +31,7 @@ const PROCESS_TEST PROCESS_TESTS[] =
     { "BadWriteMsr", "BadWriteMsr", NULL},
     { "BadWriteNonCanonical", "BadWriteNonCanonical", NULL},
     { "BadWriteNull", "BadWriteNull", NULL},
-	*/
+	
     // file-syscalls
   // { "FileCloseBad", "FileCloseBad", NULL},
    // { "FileCloseNormal", "FileCloseNormal", NULL},
@@ -63,7 +63,7 @@ const PROCESS_TEST PROCESS_TESTS[] =
    //{ "ProcessCreateMissingFile", "ProcessCreateMissingFile", NULL},
     { "ProcessCreateMultiple", "ProcessCreateMultiple", NULL},
     { "ProcessCreateOnce", "ProcessCreateOnce", NULL},
-// { "ProcessCreateWithArguments", "ProcessCreateWithArguments", NULL},
+ { "ProcessCreateWithArguments", "ProcessCreateWithArguments", NULL},
 
    { "ProcessExit", "ProcessExit", NULL},
   { "ProcessGetPid", "ProcessGetPid", NULL},
