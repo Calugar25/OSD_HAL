@@ -26,6 +26,8 @@ __main(
             __leave;
         }
 
+		LOG_ERROR("KKK %x", pid1);
+
         status = SyscallProcessGetPid(UM_INVALID_HANDLE_VALUE, &pid2);
         if (!SUCCEEDED(status))
         {
@@ -64,7 +66,12 @@ __main(
                       pid1, pid2);
         }
 
+
+
         status = SyscallProcessGetPid(hProcess, &pid2);
+
+		
+
         if (!SUCCEEDED(status))
         {
             LOG_FUNC_ERROR("SyscallProcessGetPid", status);
@@ -75,7 +82,7 @@ __main(
         {
             LOG_ERROR("Two processes should not have the same PID, pid1: 0x%X, pid2: 0x%X!\n",
                       pid1, pid2);
-        }
+       }
     }
     __finally
     {

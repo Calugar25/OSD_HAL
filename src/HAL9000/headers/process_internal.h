@@ -5,6 +5,7 @@
 #include "process.h"
 #include "synch.h"
 #include "ex_event.h"
+#include "syscall_defs.h"
 
 #define PROCESS_MAX_PHYSICAL_FRAMES     16
 #define PROCESS_MAX_OPEN_FILES          16
@@ -15,7 +16,11 @@ typedef struct _PROCESS
 
     // The PIDs will also be used for the CR3 PCID
     PID                             Id;
+	UM_HANDLE LastHandle;
+	UM_HANDLE processHandle;
 
+
+	LIST_ENTRY pList;
     char*                           ProcessName;
 
     // Command line related
@@ -58,6 +63,9 @@ typedef struct _PROCESS
 
     // VaSpace used only for UM virtual memory allocations
     struct _VMM_RESERVATION_SPACE*  VaSpace;
+
+	//Handle for systemhandler userprog project 
+	
 } PROCESS, *PPROCESS;
 
 //******************************************************************************

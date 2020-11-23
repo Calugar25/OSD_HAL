@@ -8,6 +8,7 @@
 #include "process_internal.h"
 #include "dmp_cpu.h"
 #include "thread_internal.h"
+#include "iomu.h"
 
 extern void SyscallEntry();
 
@@ -18,6 +19,8 @@ SyscallHandler(
     INOUT   COMPLETE_PROCESSOR_STATE    *CompleteProcessorState
     )
 {
+
+
     SYSCALL_ID sysCallId;
     PQWORD pSyscallParameters;
     PQWORD pParameters;
@@ -62,12 +65,17 @@ SyscallHandler(
         // The first parameter is the system call ID, we don't care about it => +1
         pSyscallParameters = (PQWORD)usermodeProcessorState->RegisterValues[RegisterRbp] + 1;
 
+		//LOG("THIS IS kk : %x \n ", sysCallId);
+
         // Dispatch syscalls
         switch (sysCallId)
         {
         case SyscallIdIdentifyVersion:
             status = SyscallValidateInterface((SYSCALL_IF_VERSION)*pSyscallParameters);
             break;
+		case SyscallIdProcessGetPid:
+			status = SyscallProcessGetPid((UM_HANDLE)pSyscallParameters[0],(PID*)pSyscallParameters[1]);
+			break;
         // STUDENT TODO: implement the rest of the syscalls
 		case SyscallIdProcessExit:
 			status = SyscallProcessExit((STATUS)*pSyscallParameters);
@@ -77,9 +85,21 @@ SyscallHandler(
 				, (QWORD)pSyscallParameters[2],(QWORD*) pSyscallParameters[3]
 			);
 			break;
+		case SyscallIdProcessCreate:
+			status = SyscallProcessCreate((char*)pSyscallParameters[0], (QWORD)pSyscallParameters[1], (char*)pSyscallParameters[2], (QWORD)pSyscallParameters[3], (UM_HANDLE*)pSyscallParameters[4]);
+			break;
 		case SyscallIdThreadExit:
 			status = SyscallThreadExit((STATUS)*pSyscallParameters);
 			break;
+		case SyscallIdProcessWaitForTermination:
+			status = SyscallProcessWaitForTermination((UM_HANDLE)pSyscallParameters[0],(STATUS*)pSyscallParameters[1]);
+			break;
+		case SyscallIdProcessCloseHandle:
+			status = SyscallProcessCloseHandle((UM_HANDLE)*pSyscallParameters);
+			break;
+		//case SyscallIdFileCreate:
+		//	status = SyscallFileCreate((char*)pSyscallParameters[0], (QWORD)pSyscallParameters[1], (BOOLEAN)pSyscallParameters[2], (BOOLEAN)pSyscallParameters[3], (UM_HANDLE*)pSyscallParameters[4]);
+		//	break;
         default:
             LOG_ERROR("Unimplemented syscall called from User-space!\n");
             status = STATUS_UNSUPPORTED;
@@ -242,3 +262,157 @@ SyscallThreadExit(
 
 	return STATUS_SUCCESS;
 }
+
+STATUS
+SyscallProcessGetPid(
+	IN_OPT  UM_HANDLE               ProcessHandle,
+	OUT     PID* ProcessId
+)
+{
+
+
+	if (ProcessHandle == UM_INVALID_HANDLE_VALUE)
+	{
+		
+		*ProcessId = GetCurrentProcess()->Id;
+		 return STATUS_SUCCESS;
+	}
+	else
+	{
+	
+		LIST_ITERATOR it;
+		ListIteratorInit(&GetCurrentProcess()->pList, &it);
+		PLIST_ENTRY pEntry;
+		while ((pEntry = ListIteratorNext(&it)) != NULL)
+		{
+			PPROCESS process = CONTAINING_RECORD(pEntry, PROCESS, pList);
+			if (process->processHandle == ProcessHandle)
+			{
+				*ProcessId = process->Id;
+				return STATUS_SUCCESS;
+			}
+		}
+		
+		
+	}
+	return STATUS_UNSUCCESSFUL;
+
+	
+}
+
+
+STATUS
+SyscallProcessCreate(
+	IN_READS_Z(PathLength)
+	char* ProcessPath,
+	IN          QWORD               PathLength,
+	IN_READS_OPT_Z(ArgLength)
+	char* Arguments,
+	IN          QWORD               ArgLength,
+	OUT         UM_HANDLE* ProcessHandle
+) {
+	//UNREFERENCED_PARAMETER(PathLength);
+	UNREFERENCED_PARAMETER(ArgLength);
+	
+	if (ProcessPath == NULL)
+	{
+		return STATUS_UNSUCCESSFUL;
+	}
+
+	if (PathLength == 0)
+	{
+		return STATUS_UNSUCCESSFUL;
+	}
+
+
+	char fullPath[MAX_PATH];
+
+	snprintf(fullPath, MAX_PATH,
+		"%s%s\\%s", IomuGetSystemPartitionPath(), "APPLICATIONS",
+		ProcessPath);
+
+	//LOG("this is the full path %s", fullPath);
+
+	PPROCESS process;
+	STATUS status;
+
+
+	status=ProcessCreate(
+		fullPath,
+		Arguments,
+		&process);
+	
+
+	if (process != NULL)
+	{
+		*ProcessHandle = process->processHandle;
+	}
+
+	return status;
+
+
+}
+
+
+STATUS
+SyscallProcessWaitForTermination(
+	IN      UM_HANDLE               ProcessHandle,
+	OUT     STATUS* TerminationStatus
+) {
+	STATUS status;
+	
+	if (UM_INVALID_HANDLE_VALUE != ProcessHandle)
+	{	
+		
+		LIST_ITERATOR it;
+		ListIteratorInit(&GetCurrentProcess()->pList, &it);
+		PLIST_ENTRY pEntry;
+		
+		while ((pEntry = ListIteratorNext(&it)) != NULL)
+		{
+			PPROCESS process = CONTAINING_RECORD(pEntry, PROCESS, pList);
+			if (process->processHandle == ProcessHandle)
+			{
+				ProcessWaitForTermination(process,&status);
+				*TerminationStatus = status;
+				return STATUS_SUCCESS;
+			}
+		}
+		
+	}
+	*TerminationStatus = STATUS_UNSUCCESSFUL;
+	return STATUS_UNSUCCESSFUL;
+	
+	
+
+}
+
+STATUS
+SyscallProcessCloseHandle(
+	IN      UM_HANDLE               ProcessHandle
+) {
+	if (ProcessHandle == UM_INVALID_HANDLE_VALUE)
+	{
+		return STATUS_UNSUCCESSFUL;
+	}
+	else {
+		LIST_ITERATOR it;
+		ListIteratorInit(&GetCurrentProcess()->pList, &it);
+		PLIST_ENTRY pEntry;
+
+		while ((pEntry = ListIteratorNext(&it)) != NULL)
+		{
+			PPROCESS process = CONTAINING_RECORD(pEntry, PROCESS, pList);
+			if (process->processHandle == ProcessHandle)
+			{
+				RemoveEntryList(&process->pList);
+				ProcessCloseHandle(process);
+				
+				return STATUS_SUCCESS;
+			}
+		}
+	}
+	return STATUS_UNSUCCESSFUL;
+}
+
+

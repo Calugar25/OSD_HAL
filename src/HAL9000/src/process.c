@@ -7,6 +7,7 @@
 #include "bitmap.h"
 #include "pte.h"
 #include "pe_exports.h"
+#include "syscall_defs.h"
 
 typedef struct _PROCESS_SYSTEM_DATA
 {
@@ -17,6 +18,8 @@ typedef struct _PROCESS_SYSTEM_DATA
     BYTE            PidBitmapBuffer[PCID_TOTAL_NO_OF_VALUES/BITS_PER_BYTE];
 
     PPROCESS        SystemProcess;
+
+	
 
     LIST_ENTRY      ProcessList;
     MUTEX           ProcessListLock;
@@ -34,7 +37,10 @@ _ProcessSystemRetrieveNextPid(
     PID idx;
 
     MutexAcquire(&m_processData.PidBitmapLock);
+
     idx = BitmapScanAndFlip(&m_processData.PidBitmap, 1, FALSE);
+	//LOG
+	//LOG("HOW ON EARTY %x", idx);
     MutexRelease(&m_processData.PidBitmapLock);
 
     ASSERT(PCID_IS_VALID(idx));
@@ -118,8 +124,13 @@ ProcessSystemPreinit(
 
     MutexInit(&m_processData.PidBitmapLock, FALSE);
 
+	
+
     MutexInit(&m_processData.ProcessListLock, FALSE);
     InitializeListHead(&m_processData.ProcessList);
+
+	//InitializeListHead(&GetCurrentProcess()->pList);
+	
 }
 
 _No_competing_thread_
@@ -148,6 +159,7 @@ ProcessSystemInitSystemProcess(
 
     // When this function will be called only the BSP will be active and only its main
     // thread will be running
+	
     ProcessInsertThreadInList(pProcess, GetCurrentThread());
 
     return status;
@@ -244,6 +256,13 @@ ProcessCreate(
         status = _ProcessInit(strrchr(PathToExe, '\\') + 1,
                               Arguments,
                               &pProcess);
+
+		pProcess->processHandle = GetCurrentProcess()->LastHandle + 1;
+		GetCurrentProcess()->LastHandle = GetCurrentProcess()->LastHandle + 1;
+
+		
+
+		
         if (!SUCCEEDED(status))
         {
             LOG_FUNC_ERROR("_ProcessInit", status);
@@ -278,6 +297,12 @@ ProcessCreate(
             __leave;
         }
 
+		if (ProcessIsSystem(GetCurrentProcess())) {
+			InitializeListHead(&GetCurrentProcess()->pList);
+		}
+		
+		InsertTailList(&GetCurrentProcess()->pList, &pProcess->pList);
+
         LOG_TRACE_PROCESS("Successfully ran UM application!\n");
     }
     __finally
@@ -303,9 +328,37 @@ ProcessCreate(
         }
     }
 
+	//LOG("THIS IS THE CURRENT PROCESS WITH ID %x and handle %x\n", GetCurrentProcess()->Id, GetCurrentProcess()->processHandle);
+	//LOG("THIS is the process that was created with id %x and handle %x\n", pProcess->Id, pProcess->processHandle);
+	
+	/*if (GetCurrentProcess()->Id == 1)
+	{
+		LIST_ITERATOR it;
+		ListIteratorInit(&GetCurrentProcess()->ProcessList, &it);
+		PLIST_ENTRY pEntry;
+
+		while ((pEntry = ListIteratorNext(&it)) != NULL)
+		{
+			PPROCESS process = CONTAINING_RECORD(pEntry, PROCESS, ProcessList);
+
+			LOG("KK %x : %x\n", process->Id, process->processHandle);
+
+		}
+
+
+	}
+	*/
+	
     LOG_FUNC_END;
 
+
     return status;
+}
+
+void 
+IncrementHandleOfProcess(PPROCESS Process)
+{
+	Process->LastHandle = Process->LastHandle + 1;
 }
 
 void
@@ -367,6 +420,8 @@ ProcessTerminate(
     PTHREAD pCurrentThread;
     BOOLEAN bFoundCurThreadInProcess;
     INTR_STATE oldState;
+
+	//LOG("DAA");
 
     if (NULL == Process)
     {
@@ -477,6 +532,11 @@ _ProcessInit(
         }
 
         InitializeListHead(&pProcess->NextProcess);
+		
+		//if (GetCurrentProcess()->Id == 1)
+		//{
+		//	InitializeListHead(&GetCurrentProcess()->pList);
+		//}
 
         pProcess->HeaderInfo = ExAllocatePoolWithTag(PoolAllocateZeroMemory, sizeof(PE_NT_HEADER_INFO), HEAP_PROCESS_TAG, 0);
         if (NULL == pProcess->HeaderInfo)
@@ -505,18 +565,29 @@ _ProcessInit(
         LOG_TRACE_PROCESS("Successfully parsed process command line!\n");
 
         InitializeListHead(&pProcess->ThreadList);
+		InitializeListHead(&pProcess->pList);
         LockInit(&pProcess->ThreadListLock);
+
+		pProcess->LastHandle = 0;
+		pProcess->processHandle = 0;
+
 
         // Do this as late as possible - we want to interfere as little as possible
         // with the system management in case something goes wrong (PID + full process
         // list management)
         pProcess->Id = _ProcessSystemRetrieveNextPid();
+	
+		//initialize the handels for the processes
+
+		
 
         MutexAcquire(&m_processData.ProcessListLock);
         InsertTailList(&m_processData.ProcessList, &pProcess->NextProcess);
         MutexRelease(&m_processData.ProcessListLock);
 
         LOG_TRACE_PROCESS("Process with PID 0x%X created\n", pProcess->Id);
+
+		
     }
     __finally
     {
@@ -729,6 +800,10 @@ _ProcessDestroy(
     MutexAcquire(&m_processData.ProcessListLock);
     RemoveEntryList(&Process->NextProcess);
     MutexRelease(&m_processData.ProcessListLock);
+	//LOG("AA\n");
+
+	//RemoveEntryList(&Process->ProcessList);
+
 
     if (NULL != Process->FullCommandLine)
     {
