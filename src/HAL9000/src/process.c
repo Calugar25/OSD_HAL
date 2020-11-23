@@ -8,6 +8,7 @@
 #include "pte.h"
 #include "pe_exports.h"
 #include "syscall_defs.h"
+#include "list.h"
 
 typedef struct _PROCESS_SYSTEM_DATA
 {
@@ -299,6 +300,8 @@ ProcessCreate(
 
 		if (ProcessIsSystem(GetCurrentProcess())) {
 			InitializeListHead(&GetCurrentProcess()->pList);
+			GetCurrentProcess()->LastFileHandle = 30;
+			
 		}
 		
 		InsertTailList(&GetCurrentProcess()->pList, &pProcess->pList);
@@ -546,6 +549,8 @@ _ProcessInit(
             __leave;
         }
 
+
+
         pProcess->ProcessName = ExAllocatePoolWithTag(PoolAllocateZeroMemory, nameSize, HEAP_PROCESS_TAG, 0);
         if (NULL == pProcess->ProcessName)
         {
@@ -554,6 +559,10 @@ _ProcessInit(
             __leave;
         }
         strcpy(pProcess->ProcessName, Name);
+
+		pProcess->fileList = ExAllocatePoolWithTag(PoolAllocateZeroMemory, sizeof(FILE_STRUCT), HEAP_PROCESS_TAG, 0);
+
+		
 
         // Setup Process->FullCommandLine
         status = _ProcessParseCommandLine(pProcess, Arguments);
@@ -570,6 +579,7 @@ _ProcessInit(
 
 		pProcess->LastHandle = 0;
 		pProcess->processHandle = 0;
+		pProcess->LastFileHandle = 30;
 
 
         // Do this as late as possible - we want to interfere as little as possible

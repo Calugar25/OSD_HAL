@@ -9,6 +9,7 @@
 #include "dmp_cpu.h"
 #include "thread_internal.h"
 #include "iomu.h"
+#include "filesystem.h"
 
 extern void SyscallEntry();
 
@@ -97,9 +98,9 @@ SyscallHandler(
 		case SyscallIdProcessCloseHandle:
 			status = SyscallProcessCloseHandle((UM_HANDLE)*pSyscallParameters);
 			break;
-		//case SyscallIdFileCreate:
-		//	status = SyscallFileCreate((char*)pSyscallParameters[0], (QWORD)pSyscallParameters[1], (BOOLEAN)pSyscallParameters[2], (BOOLEAN)pSyscallParameters[3], (UM_HANDLE*)pSyscallParameters[4]);
-		//	break;
+		case SyscallIdFileCreate:
+			status = SyscallFileCreate((char*)pSyscallParameters[0], (QWORD)pSyscallParameters[1], (BOOLEAN)pSyscallParameters[2], (BOOLEAN)pSyscallParameters[3], (UM_HANDLE*)pSyscallParameters[4]);
+			break;
         default:
             LOG_ERROR("Unimplemented syscall called from User-space!\n");
             status = STATUS_UNSUPPORTED;
@@ -414,5 +415,70 @@ SyscallProcessCloseHandle(
 	}
 	return STATUS_UNSUCCESSFUL;
 }
+/*STATUS
+IoCreateFile(
+    OUT_PTR     PFILE_OBJECT*           Handle,
+    IN_Z        char*                   FileName,
+    IN          BOOLEAN                 Directory,
+    IN          BOOLEAN                 Create,
+    IN          BOOLEAN                 Asynchronous
+    )
+{*/
+
+STATUS
+SyscallFileCreate(
+	IN_READS_Z(PathLength)
+	char* Path,
+	IN          QWORD                   PathLength,
+	IN          BOOLEAN                 Directory,
+	IN          BOOLEAN                 Create,
+	OUT         UM_HANDLE* FileHandle
+) {
+	
+	UNREFERENCED_PARAMETER(PathLength);
+	STATUS status;
+	PFILE_OBJECT fileObject;
+
+	STATUS memory = MmuIsBufferValid((PVOID)Path, PathLength, PAGE_RIGHTS_READ, GetCurrentProcess());
+
+	if (Path == NULL||memory!=STATUS_UNSUCCESSFUL||PathLength<1)
+	{
+		return STATUS_UNSUCCESSFUL;
+	}
+	else {
+	
+
+		char fullPath[MAX_PATH];
+
+		snprintf(fullPath, MAX_PATH,
+			"%s\\%s", IomuGetSystemPartitionPath(),
+			Path);
+		
+
+		if (!Create) {
+
+			
+			status = IoCreateFile(
+				&fileObject,
+				fullPath,
+				Directory,
+				Create,
+				FALSE);
+			if (status != STATUS_SUCCESS)
+			{
+				*FileHandle = 0;
+				return STATUS_UNSUCCESSFUL;
+			}
+			else
+			{
+				*FileHandle = 22;
+			}
+		}
+		*FileHandle = 0;
+		return STATUS_SUCCESS;
+	}
 
 
+
+	
+}

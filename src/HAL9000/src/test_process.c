@@ -33,26 +33,26 @@ const PROCESS_TEST PROCESS_TESTS[] =
     { "BadWriteNull", "BadWriteNull", NULL},
 	*/
     // file-syscalls
-  /* { "FileCloseBad", "FileCloseBad", NULL},
-    { "FileCloseNormal", "FileCloseNormal", NULL},
-    { "FileCloseStdout", "FileCloseStdout", NULL},
-    { "FileCloseTwice", "FileCloseTwice", NULL},
+  // { "FileCloseBad", "FileCloseBad", NULL},
+   // { "FileCloseNormal", "FileCloseNormal", NULL},
+   // { "FileCloseStdout", "FileCloseStdout", NULL},
+   // { "FileCloseTwice", "FileCloseTwice", NULL},
 
     { "FileCreateBadPointer", "FileCreateBadPointer", NULL},
     { "FileCreateEmptyPath", "FileCreateEmptyPath", NULL},
-    { "FileCreateExistent", "FileCreateExistent", NULL},
-    { "FileCreateMissing", "FileCreateMissing", NULL},
-    { "FileCreateNormal", "FileCreateNormal", NULL},
+  //  { "FileCreateExistent", "FileCreateExistent", NULL},
+  //  { "FileCreateMissing", "FileCreateMissing", NULL},
+   //{ "FileCreateNormal", "FileCreateNormal", NULL},
     { "FileCreateNull", "FileCreateNull", NULL},
-    { "FileCreateTwice", "FileCreateTwice", NULL},
+   // { "FileCreateTwice", "FileCreateTwice", NULL},
 
-    { "FileReadBadHandle", "FileReadBadHandle", NULL},
-    { "FileReadBadPointer", "FileReadBadPointer", NULL},
-    { "FileReadKernel", "FileReadKernel", NULL},
-    { "FileReadNormal", "FileReadNormal", NULL},
-    { "FileReadStdout", "FileReadStdout", NULL},
-    { "FileReadZero", "FileReadZero", NULL},
-	*/
+   // { "FileReadBadHandle", "FileReadBadHandle", NULL},
+   // { "FileReadBadPointer", "FileReadBadPointer", NULL},
+   // { "FileReadKernel", "FileReadKernel", NULL},
+  //  { "FileReadNormal", "FileReadNormal", NULL},
+  //  { "FileReadStdout", "FileReadStdout", NULL},
+   // { "FileReadZero", "FileReadZero", NULL},
+	
     // process-syscalls
     //{ "ProcessCloseFile", "ProcessCloseFile", NULL},
   { "ProcessCloseNormal", "ProcessCloseNormal", NULL},
@@ -60,7 +60,7 @@ const PROCESS_TEST PROCESS_TESTS[] =
     { "ProcessCloseTwice", "ProcessCloseTwice", NULL},
 
   { "ProcessCreateBadPointer", "ProcessCreateBadPointer", NULL},
-  // { "ProcessCreateMissingFile", "ProcessCreateMissingFile", NULL},
+   //{ "ProcessCreateMissingFile", "ProcessCreateMissingFile", NULL},
     { "ProcessCreateMultiple", "ProcessCreateMultiple", NULL},
     { "ProcessCreateOnce", "ProcessCreateOnce", NULL},
 // { "ProcessCreateWithArguments", "ProcessCreateWithArguments", NULL},

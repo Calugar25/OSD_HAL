@@ -2,9 +2,11 @@
 #include "io.h"
 #include "filesystem.h"
 #include "iomu.h"
-
+#include "syscall_defs.h"
 #include "strutils.h"
-
+#include "process.h"
+#include "list.h"
+#include "process_internal.h"
 // X:\\ => minimum 3 letters to open root
 #define FILE_NAME_MIN_LEN               3
 
@@ -104,7 +106,7 @@ IoCreateFile(
     char driveLetter;
     PDEVICE_OBJECT pFileSystemDevice;
     PIO_STACK_LOCATION pStackLocation;
-
+	
     ASSERT(NULL != Handle);
     ASSERT(NULL != FileName);
 
@@ -183,9 +185,14 @@ IoCreateFile(
         else
         {
             LOG_TRACE_IO("File size: 0x%X\n", pStackLocation->FileObject->FileSize);
-
+			//pStackLocation->FileObject->fileHandle = GetCurrentProcess()->LastFileHandle+1;
+			pStackLocation->FileObject->fileHandle = 22;
+			//GetCurrentProcess()->LastFileHandle = GetCurrentProcess()->LastFileHandle + 1;
+			
             // complete file handle
             *Handle = pStackLocation->FileObject;
+			
+			
         }
 
         if (NULL != pIrp)

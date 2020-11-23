@@ -1,5 +1,5 @@
 #pragma once
-
+#include "syscall_defs.h"
 typedef struct _FILE_OBJECT_FLAGS
 {
     // if set => IoManager will update file offset
@@ -30,6 +30,10 @@ typedef struct _FILE_OBJECT
     struct _FILE_OBJECT*    RelatedFileObject;
 
     QWORD                   CurrentByteOffset;
+	//handle for each file 
+	
+
+	UM_HANDLE fileHandle;
 
     // real file size
     QWORD                   FileSize;

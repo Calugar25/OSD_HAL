@@ -6,9 +6,19 @@
 #include "synch.h"
 #include "ex_event.h"
 #include "syscall_defs.h"
+#include "filesystem.h"
 
 #define PROCESS_MAX_PHYSICAL_FRAMES     16
 #define PROCESS_MAX_OPEN_FILES          16
+
+typedef struct _FILE_STRUCT
+{
+	UM_HANDLE fileHandleStruct;
+	FILE_OBJECT fileObject;
+	PLIST_ENTRY fileEntry;
+
+}FILE_STRUCT, *PFILE_STRUCT;
+
 
 typedef struct _PROCESS
 {
@@ -19,9 +29,15 @@ typedef struct _PROCESS
 	UM_HANDLE LastHandle;
 	UM_HANDLE processHandle;
 
-
+	//list of child processes
 	LIST_ENTRY pList;
     char*                           ProcessName;
+
+	//list of structures that link files to this process 
+	PLIST_ENTRY fileList;
+
+	//last handle given to files
+	UM_HANDLE LastFileHandle;
 
     // Command line related
 
