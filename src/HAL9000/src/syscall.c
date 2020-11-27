@@ -288,7 +288,8 @@ SyscallProcessGetPid(
 		{
 			PPROCESS process = CONTAINING_RECORD(pEntry, PROCESS, pList);
 			if (process->processHandle == ProcessHandle)
-			{
+			{	
+
 				*ProcessId = process->Id;
 				return STATUS_SUCCESS;
 			}
@@ -454,7 +455,6 @@ SyscallFileCreate(
 			"%s\\%s", IomuGetSystemPartitionPath(),
 			Path);
 		
-
 		if (!Create) {
 
 			

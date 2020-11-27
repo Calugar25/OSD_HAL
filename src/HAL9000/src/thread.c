@@ -1085,10 +1085,13 @@ _ComputeResultingStack(
 	char* pChar = NULL;
 	char* pDelim = " ";
 	char* pContext = NULL;
+
 	//mapping physical mem to kernel
 	MmuGetSystemVirtualAddressForUserBuffer((PVOID)PtrDiff(InitialStack, STACK_DEFAULT_SIZE), STACK_DEFAULT_SIZE, PAGE_RIGHTS_READWRITE, Process, &KernelAddr);
+	
 	//incrementing kernel addr
 	CurrentStackKernelAddr = (PVOID)PtrOffset(KernelAddr, STACK_DEFAULT_SIZE);
+	
 	//alloc mem for args
 	ArgStack = (PVOID)PtrDiff(CurrentStackKernelAddr, (1 + strlen(Process->FullCommandLine)) * sizeof(char));
 	ArgvStack = (PVOID)AlignAddressLower(ArgStack, NATURAL_ALIGNMENT);
