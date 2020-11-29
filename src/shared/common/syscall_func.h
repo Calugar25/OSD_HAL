@@ -208,6 +208,7 @@ SyscallProcessCloseHandle(
 // Parameter:    IN_OPT QWORD Key - When non-zero creates or accesses a system
 //                                  wide shared memory region.
 // Parameter:    OUT PVOID* AllocatedAddress - The virtual address allocated
+
 //******************************************************************************
 STATUS
 SyscallVirtualAlloc(
