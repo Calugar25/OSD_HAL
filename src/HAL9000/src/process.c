@@ -8,6 +8,7 @@
 #include "pte.h"
 #include "pe_exports.h"
 
+
 typedef struct _PROCESS_SYSTEM_DATA
 {
     MUTEX           PidBitmapLock;
@@ -507,6 +508,9 @@ _ProcessInit(
         InitializeListHead(&pProcess->ThreadList);
         LockInit(&pProcess->ThreadListLock);
 
+		//lab9
+		InitializeListHead(&pProcess->MappingsListHead);
+
         // Do this as late as possible - we want to interfere as little as possible
         // with the system management in case something goes wrong (PID + full process
         // list management)
@@ -747,6 +751,20 @@ _ProcessDestroy(
         ExFreePoolWithTag(Process->HeaderInfo, HEAP_PROCESS_TAG);
         Process->HeaderInfo = NULL;
     }
+
+
+	PPROCESS p = GetCurrentProcess();
+	LIST_ITERATOR it;
+	ListIteratorInit(&p->MappingsListHead, &it);
+
+	PLIST_ENTRY pEntry;
+	while ((pEntry = ListIteratorNext(&it)) != NULL)
+	{
+		PMAPPING pFoo = CONTAINING_RECORD(pEntry, MAPPING, MappingEntry);
+		LOG("We freed the mapping with virtual address :0x%x and physical address :0x%x ", pFoo->VirtualAddress, pFoo->PhysicalAddress);
+		
+
+	}
 
     // Because the system process will never be destroyed it is ok to free
     // these memory addresses unconditionally

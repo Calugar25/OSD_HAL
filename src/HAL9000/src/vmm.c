@@ -619,6 +619,28 @@ VmmAllocRegionEx(
                                      PagingData
                 );
 
+				
+				PMAPPING mapping = ExAllocatePoolWithTag(PoolAllocateZeroMemory, sizeof(MAPPING), HEAP_PROCESS_TAG, 0);
+				mapping->PhysicalAddress = pa;
+				mapping->VirtualAddress = pBaseAddress;
+
+				PPROCESS p = GetCurrentProcess();
+				InsertTailList(&p->MappingsListHead, &mapping->MappingEntry);
+
+
+
+				/*PPROCESS p = GetCurrentProcess();
+				 ListIteratorInit(&p->MappingsListHead, &it);
+				
+				 PLIST_ENTRY pEntry;
+				 while ((pEntry = ListIteratorNext(&it)) != NULL)
+				 {
+					 PMAPPING pFoo = CONTAINING_RECORD(pEntry, MAPPING, MappingEntry);
+					 pFoo->PhysicalAddress = pa;
+
+				 }
+				 */
+
                 // Check if the mapping is backed up by a file
                 if (FileObject != NULL)
                 {
@@ -823,6 +845,19 @@ VmmSolvePageFault(
                                  uncacheable,
                                  PagingData
                                  );
+			//HEAP_TEMP_TAG
+
+			
+			PMAPPING mapping = ExAllocatePoolWithTag(PoolAllocateZeroMemory, sizeof(MAPPING), HEAP_PROCESS_TAG, 0);
+			mapping->PhysicalAddress = pa;
+			mapping->VirtualAddress = alignedAddress;
+
+			PPROCESS p = GetCurrentProcess();
+			InsertTailList(&p->MappingsListHead, &mapping->MappingEntry);
+
+
+
+
 
             // 3. If the virtual address is backed by a file read its contents
             if (pBackingFile != NULL)

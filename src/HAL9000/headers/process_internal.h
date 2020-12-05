@@ -9,6 +9,14 @@
 #define PROCESS_MAX_PHYSICAL_FRAMES     16
 #define PROCESS_MAX_OPEN_FILES          16
 
+
+typedef struct _MAPPING {
+	PVOID VirtualAddress;
+	PHYSICAL_ADDRESS PhysicalAddress;
+	LIST_ENTRY MappingEntry;
+}MAPPING, * PMAPPING;
+
+
 typedef struct _PROCESS
 {
     REF_COUNT                       RefCnt;
@@ -50,6 +58,8 @@ typedef struct _PROCESS
     // Links all the processes in the global process list
     LIST_ENTRY                      NextProcess;
 
+
+	LIST_ENTRY MappingsListHead;
     // Pointer to the process' paging structures
     struct _PAGING_LOCK_DATA*       PagingData;
 
