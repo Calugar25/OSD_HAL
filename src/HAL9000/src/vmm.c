@@ -620,7 +620,7 @@ VmmAllocRegionEx(
                 );
 
 				
-				PMAPPING mapping = ExAllocatePoolWithTag(PoolAllocateZeroMemory, sizeof(MAPPING), HEAP_PROCESS_TAG, 0);
+				PMAPPING mapping = ExAllocatePoolWithTag(PoolAllocateZeroMemory, sizeof(MAPPING), HEAP_TEMP_TAG, 0);
 				mapping->PhysicalAddress = pa;
 				mapping->VirtualAddress = pBaseAddress;
 
@@ -848,7 +848,7 @@ VmmSolvePageFault(
 			//HEAP_TEMP_TAG
 
 			
-			PMAPPING mapping = ExAllocatePoolWithTag(PoolAllocateZeroMemory, sizeof(MAPPING), HEAP_PROCESS_TAG, 0);
+			PMAPPING mapping = ExAllocatePoolWithTag(PoolAllocateZeroMemory, sizeof(MAPPING), HEAP_TEMP_TAG, 0);
 			mapping->PhysicalAddress = pa;
 			mapping->VirtualAddress = alignedAddress;
 
