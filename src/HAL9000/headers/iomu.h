@@ -2,6 +2,9 @@
 
 #include "io.h"
 
+//lab10
+
+
 void
 _No_competing_thread_
 IomuPreinitSystem(
@@ -124,3 +127,16 @@ BOOLEAN
 IomuIsInterruptSpurious(
     IN          BYTE                    Vector
     );
+
+
+//lab 10 
+STATUS
+IomuSwapOut(
+	IN      PVOID       VirtualAddress
+);
+
+
+STATUS
+IomuSwapIn(
+	OUT     PVOID       VirtualAddress
+);

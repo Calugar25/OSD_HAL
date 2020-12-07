@@ -510,6 +510,8 @@ _ProcessInit(
 
 		//lab9
 		InitializeListHead(&pProcess->MappingsListHead);
+		//lab10
+		InitializeListHead(&pProcess->SwapListHead);
 
         // Do this as late as possible - we want to interfere as little as possible
         // with the system management in case something goes wrong (PID + full process

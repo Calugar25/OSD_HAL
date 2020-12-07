@@ -24,6 +24,8 @@
 #include "smp.h"
 #include "ex_system.h"
 #include "lock_common.h"
+#include "process_internal.h"
+#include "process.h"
 
 #define PIC_MASTER_OFFSET                   0x20
 #define PIC_SLAVE_OFFSET                    0x28
@@ -79,7 +81,9 @@ typedef struct _IOMU_DATA
 
     PDEVICE_OBJECT              SystemDevice;
 
+	LOCK BitmapLock;
 
+	_Guarded_by_(BitmapLock)
 	BITMAP SwapBitmap;
 	PVOID SwapBitmapData;
 
@@ -91,7 +95,6 @@ typedef struct _IOMU_DATA
     WORD                        PitInitialTickCount;
 
     char                        SystemDrive[4];
-
     LOCK                        GlobalInterruptLock;
 
     REGISTERED_INTERRUPT_LIST   RegisteredInterrupts[NO_OF_USABLE_INTERRUPTS];
@@ -99,6 +102,8 @@ typedef struct _IOMU_DATA
 
 	//lab10
 	DWORD SwapFileSize;
+
+	
 
     _Guarded_by_(GlobalInterruptLock)
     BITMAP                      InterruptBitmap;
@@ -544,6 +549,7 @@ IomuLateInit(
 	m_iomuData.SwapBitmapData = ExAllocatePoolWithTag(PoolAllocatePanicIfFail, bitmapSize, HEAP_IOMU_TAG, 0);
 
 	BitmapInit(&m_iomuData.SwapBitmap, m_iomuData.SwapBitmapData);
+	LockInit(&m_iomuData.BitmapLock);
 
     if (!SUCCEEDED(status))
     {
@@ -1414,4 +1420,66 @@ _IomuProgramPciInterrupt(
     LOG_FUNC_END;
 
     return status;
+}
+
+//lab10
+STATUS
+IomuSwapOut(
+	IN      PVOID       VirtualAddress
+) {
+
+	STATUS status;
+	INTR_STATE oldState;
+	 QWORD idx;
+
+
+	LockAcquire(&m_iomuData.BitmapLock, &oldState);
+	idx = BitmapScanFromAndFlip(&m_iomuData.SwapBitmap, 0, 20, FALSE);
+	if (MAX_DWORD == idx)
+	{
+		LockRelease(&m_iomuData.BitmapLock, oldState);
+		return STATUS_UNSUCCESSFUL;
+	}
+
+	LockRelease(&m_iomuData.BitmapLock, oldState);
+	
+
+	PFILE_OBJECT SwapFile = IomuGetSwapFile();
+	
+	QWORD bytesWritten;
+	status = IoWriteFile(SwapFile,PAGE_SIZE,&idx,VirtualAddress,&bytesWritten);
+	return status;
+}
+
+
+STATUS
+IomuSwapIn(
+
+	OUT     PVOID       VirtualAddress
+) {
+	STATUS status;
+	//INTR_STATE oldState;
+	PFILE_OBJECT SwapFile = IomuGetSwapFile();
+	//status = IoReadFile(SwapFile,PAGE_SIZE,);
+	//get from the list of swaped pages the index needed from the bitmap
+	PPROCESS p = GetCurrentProcess();
+	LIST_ITERATOR it;
+	ListIteratorInit(&p->SwapListHead,&it);
+
+	QWORD index;
+
+	PLIST_ENTRY pEntry;
+	while ((pEntry = ListIteratorNext(&it)) != NULL)
+	{
+		PSWAP_MAPPING swap = CONTAINING_RECORD(pEntry, SWAP_MAPPING, SwapEntry);
+		if (swap->VirtualAddress == VirtualAddress) {
+			index = swap->SwapSlot;
+		}
+	}
+	PVOID memory;
+	QWORD bytesRead;
+	status = IoReadFile(SwapFile, PAGE_SIZE,&index, &memory,&bytesRead);
+
+	return status;
+
 }

@@ -9,6 +9,12 @@
 #define PROCESS_MAX_PHYSICAL_FRAMES     16
 #define PROCESS_MAX_OPEN_FILES          16
 
+typedef struct _SWAP_MAPPING {
+	PVOID VirtualAddress;
+	QWORD SwapSlot;
+	LIST_ENTRY SwapEntry;
+}SWAP_MAPPING,*PSWAP_MAPPING;
+
 
 typedef struct _MAPPING {
 	PVOID VirtualAddress;
@@ -58,6 +64,9 @@ typedef struct _PROCESS
     // Links all the processes in the global process list
     LIST_ENTRY                      NextProcess;
 
+
+	//lab10
+	LIST_ENTRY SwapListHead;
 
 	LIST_ENTRY MappingsListHead;
     // Pointer to the process' paging structures

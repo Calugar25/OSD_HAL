@@ -212,7 +212,7 @@ PmmReleaseMemory(
 {
     QWORD index;
     INTR_STATE oldState;
-
+	
     ASSERT( IsAddressAligned(PhysicalAddr, PAGE_SIZE));
 
     index = (QWORD) PhysicalAddr / PAGE_SIZE;
