@@ -102,6 +102,11 @@ SyscallHandler(
 		case SyscallIdVirtualAlloc:
 			status = SyscallVirtualAlloc((PVOID)pSyscallParameters[0], (QWORD)pSyscallParameters[1], (VMM_ALLOC_TYPE)pSyscallParameters[2], (PAGE_RIGHTS)pSyscallParameters[3], (UM_HANDLE)pSyscallParameters[4], (QWORD)pSyscallParameters[5],(PVOID)pSyscallParameters[6]);
 			break;
+		case SyscallIdVirtualFree:
+			SyscallVirtualFree((PVOID)pSyscallParameters[0],
+				(QWORD)pSyscallParameters[1], 
+				(VMM_FREE_TYPE) pSyscallParameters[2]);
+			break;
         default:
             LOG_ERROR("Unimplemented syscall called from User-space!\n");
             status = STATUS_UNSUPPORTED;
@@ -418,4 +423,17 @@ SyscallVirtualAlloc(
 	return STATUS_SUCCESS;
 }
 
+STATUS
+SyscallVirtualFree(
+	IN          PVOID                   Address,
+	_When_(VMM_FREE_TYPE_RELEASE == FreeType, _Reserved_)
+	_When_(VMM_FREE_TYPE_RELEASE != FreeType, IN)
+	QWORD                   Size,
+	IN          VMM_FREE_TYPE           FreeType
+) {
+	
 
+	 VmmFreeRegionEx(Address,Size, FreeType,TRUE,NULL,NULL);
+	 return STATUS_SUCCESS;
+
+}

@@ -12,6 +12,17 @@
 #include "mdl.h"
 
 #define VMM_SIZE_FOR_RESERVATION_METADATA            (5*TB_SIZE)
+//mapping
+typedef struct _FRAME_MAPPING
+{
+	PHYSICAL_ADDRESS    PhysicalAddress;
+	PVOID               VirtualAddress;
+
+	QWORD               AccessCount;
+
+	LIST_ENTRY          ListEntry;
+} FRAME_MAPPING, * PFRAME_MAPPING;
+
 
 typedef struct _VMM_DATA
 {
@@ -619,6 +630,12 @@ VmmAllocRegionEx(
                                      PagingData
                 );
 
+
+				if (PagingData != NULL && !PagingData->Data.KernelSpace)
+				{
+					_VmmAddFrameMappings(pa, pBaseAddress, noOfFrames);
+				}
+
                 // Check if the mapping is backed up by a file
                 if (FileObject != NULL)
                 {
@@ -715,6 +732,22 @@ VmmFreeRegionEx(
 
     alignedAddress = NULL;
     alignedSize = 0;
+
+	//lab 11
+	PPROCESS process = VaSpace->process;
+
+	LIST_ITERATOR it;
+	ListIteratorInit(&process->FrameMappingsHead, &it);
+
+	PLIST_ENTRY pEntry;
+	while ((pEntry = ListIteratorNext(&it)) == NULL)
+	{
+		PFRAME_MAPPING mapping = CONTAINING_RECORD(pEntry, FRAME_MAPPING, ListEntry);
+		_VmmRemoveFrameMappings(mapping,process);
+	}
+
+
+	
 
     VmReservationSpaceFreeRegion((VaSpace == NULL) ? &m_vmmData.VmmReservationSpace : VaSpace,
                                  Address,
@@ -823,6 +856,13 @@ VmmSolvePageFault(
                                  uncacheable,
                                  PagingData
                                  );
+
+
+
+			if (!PagingData->Data.KernelSpace)
+			{
+				_VmmAddFrameMappings(pa, alignedAddress, 1);
+			}
 
             // 3. If the virtual address is backed by a file read its contents
             if (pBackingFile != NULL)
@@ -936,6 +976,8 @@ VmmCreateVirtualAddressSpace(
             LOG_FUNC_ERROR_ALLOC("VmmAllocRegionEx", ReservationMetadataSize);
             __leave;
         }
+
+		pProcessVaHeader->process = GetCurrentProcess();
 
         VmReservationSpaceInit(pReservationMetadataStart,
                                StartOfVirtualAddressSpace,
@@ -1380,4 +1422,69 @@ BOOLEAN
     }
 
     return bContinue;
+}
+
+static
+void
+_VmmAddFrameMappings(
+	IN          PHYSICAL_ADDRESS    PhysicalAddress,
+	IN          PVOID               VirtualAddress,
+	IN          DWORD               FrameCount
+)
+{
+	PPROCESS pProcess;
+	PFRAME_MAPPING pMapping;
+	INTR_STATE intrState;
+
+	pProcess = GetCurrentProcess();
+
+	if (ProcessIsSystem(pProcess))
+	{
+		return;
+	}
+
+	for (DWORD i = 0; i < FrameCount; ++i)
+	{
+		pMapping = ExAllocatePoolWithTag(PoolAllocatePanicIfFail, sizeof(FRAME_MAPPING), HEAP_MMU_TAG, 0);
+
+		pMapping->PhysicalAddress = PtrOffset(PhysicalAddress, i * PAGE_SIZE);
+		pMapping->VirtualAddress = PtrOffset(VirtualAddress, i * PAGE_SIZE);
+		pMapping->AccessCount = 1;
+
+		LockAcquire(&pProcess->FrameMapLock, &intrState);
+		InsertTailList(&pProcess->FrameMappingsHead, &pMapping->ListEntry);
+		LockRelease(&pProcess->FrameMapLock, intrState);
+
+		LOG("Allocated entry from 0x%X -> 0x%X\n",
+			pMapping->VirtualAddress, pMapping->PhysicalAddress);
+	}
+}
+
+
+static
+void
+_VmmRemoveFrameMappings(
+	IN			PFRAME_MAPPING mapping,
+	IN			PPROCESS			process
+)
+{
+	
+	INTR_STATE intrState;
+
+	
+
+	if (ProcessIsSystem(process))
+	{
+		return;
+	}
+	ExFreePoolWithTag(mapping->VirtualAddress, HEAP_MMU_TAG);
+	
+	
+
+	LockAcquire(&process->FrameMapLock, &intrState);
+	RemoveEntryList(&mapping->ListEntry);
+	LockRelease(&process->FrameMapLock, intrState);
+
+	LOG("Unmapping  entry from 0x%X -> 0x%X\n",mapping->VirtualAddress, mapping->PhysicalAddress);
+	
 }

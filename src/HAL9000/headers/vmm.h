@@ -2,6 +2,9 @@
 
 #include "mmu.h"
 #include "pte.h"
+#include "vm_reservation_space.h"
+
+typedef struct _FRAME_MAPPING* PFRAME_MAPPING;
 
 typedef struct _FILE_OBJECT* PFILE_OBJECT;
 
@@ -307,3 +310,20 @@ VmmIsBufferValid(
     IN          PVMM_RESERVATION_SPACE              ReservationSpace,
     IN          BOOLEAN                             KernelAccess
     );
+
+
+static
+void
+_VmmAddFrameMappings(
+	IN          PHYSICAL_ADDRESS    PhysicalAddress,
+	IN          PVOID               VirtualAddress,
+	IN          DWORD               FrameCount
+);
+
+static
+void
+_VmmRemoveFrameMappings(
+	IN          PFRAME_MAPPING    mapping,
+	IN          PPROCESS               process
+	
+);

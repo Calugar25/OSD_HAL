@@ -11,6 +11,15 @@
 
 typedef struct _PROCESS
 {
+	//lab11 good hold lock for mapping VA to Pa 
+
+
+	LOCK                            FrameMapLock;
+
+	_Guarded_by_(FrameMapLock)
+	LIST_ENTRY                      FrameMappingsHead;
+
+
     REF_COUNT                       RefCnt;
 
     // The PIDs will also be used for the CR3 PCID
