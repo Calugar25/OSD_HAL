@@ -327,3 +327,10 @@ _VmmRemoveFrameMappings(
 	IN          PPROCESS               process
 	
 );
+
+static void
+_VmmFreeFrameMapping(
+	IN	PVOID VirtualAddress,
+	IN PVOID aligned,
+	IN	QWORD size
+);

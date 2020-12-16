@@ -732,7 +732,7 @@ VmmFreeRegionEx(
 
     alignedAddress = NULL;
     alignedSize = 0;
-
+	
 	//lab 11
 	PPROCESS process = VaSpace->process;
 
@@ -745,7 +745,7 @@ VmmFreeRegionEx(
 		PFRAME_MAPPING mapping = CONTAINING_RECORD(pEntry, FRAME_MAPPING, ListEntry);
 		_VmmRemoveFrameMappings(mapping,process);
 	}
-
+	
 
 	
 
@@ -769,6 +769,7 @@ VmmFreeRegionEx(
                          alignedSize,
                          Release,
                          PagingData);
+
     }
 }
 
@@ -976,6 +977,7 @@ VmmCreateVirtualAddressSpace(
             LOG_FUNC_ERROR_ALLOC("VmmAllocRegionEx", ReservationMetadataSize);
             __leave;
         }
+		//lab11
 
 		pProcessVaHeader->process = GetCurrentProcess();
 
@@ -1461,6 +1463,29 @@ _VmmAddFrameMappings(
 }
 
 
+static void
+_VmmFreeFrameMapping(
+	IN	PVOID VirtualAddress,
+	IN PVOID aligned,
+	IN	QWORD size
+) {
+
+	UNREFERENCED_PARAMETER(size);
+	UNREFERENCED_PARAMETER(aligned);
+	
+	PPROCESS process = GetCurrentProcess();
+
+	if (ProcessIsSystem(process))
+	{
+		return;
+	}
+	ExFreePoolWithTag(VirtualAddress, HEAP_MMU_TAG);
+
+	
+
+}
+
+
 static
 void
 _VmmRemoveFrameMappings(
@@ -1484,6 +1509,7 @@ _VmmRemoveFrameMappings(
 	LockAcquire(&process->FrameMapLock, &intrState);
 	RemoveEntryList(&mapping->ListEntry);
 	LockRelease(&process->FrameMapLock, intrState);
+
 
 	LOG("Unmapping  entry from 0x%X -> 0x%X\n",mapping->VirtualAddress, mapping->PhysicalAddress);
 	
