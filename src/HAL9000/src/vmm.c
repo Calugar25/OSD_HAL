@@ -1514,3 +1514,36 @@ _VmmRemoveFrameMappings(
 	LOG("Unmapping  entry from 0x%X -> 0x%X\n",mapping->VirtualAddress, mapping->PhysicalAddress);
 	
 }
+
+void
+VmmTick(
+	void
+)
+{
+	PPROCESS pProcess = GetCurrentProcess();
+	INTR_STATE intrState;
+
+	LockAcquire(&pProcess->FrameMapLock, &intrState);
+	for (PLIST_ENTRY pCurrentEntry = pProcess->FrameMappingsHead.Flink;
+		pCurrentEntry != &pProcess->FrameMappingsHead;
+		pCurrentEntry = pCurrentEntry->Flink)
+	{
+		BOOLEAN bAccessed;
+		BOOLEAN bDirty;
+		PHYSICAL_ADDRESS pa;
+		PML4 cr3;
+
+		PFRAME_MAPPING pMapping = CONTAINING_RECORD(pCurrentEntry, FRAME_MAPPING, ListEntry);
+
+		cr3.Raw = (QWORD)pProcess->PagingData->Data.BasePhysicalAddress;
+
+		pa = VmmGetPhysicalAddressEx(cr3,
+			pMapping->VirtualAddress,
+			&bAccessed,
+			&bDirty);
+		ASSERT(pa == pMapping->PhysicalAddress);
+
+		pMapping->AccessCount += (bAccessed || bDirty);
+	}
+	LockRelease(&pProcess->FrameMapLock, intrState);
+}

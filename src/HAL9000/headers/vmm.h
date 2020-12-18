@@ -334,3 +334,7 @@ _VmmFreeFrameMapping(
 	IN PVOID aligned,
 	IN	QWORD size
 );
+
+
+void VmmTick(void)
+;
