@@ -22,6 +22,9 @@ typedef struct _VMM_RESERVATION_SPACE
 
     RW_SPINLOCK         ReservationLock;
 
+	//boolean to know if the page must be zeroed 
+	BOOLEAN zeroed;
+
     _Guarded_by_(ReservationLock)
     PBYTE               FreeBitmapAddress;
 

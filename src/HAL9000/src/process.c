@@ -564,6 +564,7 @@ _ProcessInit(
 
 		pProcess->countFilesMutex = ExAllocatePoolWithTag(PoolAllocateZeroMemory, sizeof(MUTEX), HEAP_PROCESS_TAG, 0);
 
+
         // Setup Process->FullCommandLine
         status = _ProcessParseCommandLine(pProcess, Arguments);
         if (!SUCCEEDED(status))
@@ -587,6 +588,10 @@ _ProcessInit(
 		pProcess->countFiles = 0;
 		status = ExEventInit(&pProcess->fileClosed, ExEventTypeNotification, FALSE);
 
+
+		//init the variables for counting the number of alocated frames
+		LockInit(&pProcess->numberFramesLock);
+		pProcess->numberFrames = 0;
 
         // Do this as late as possible - we want to interfere as little as possible
         // with the system management in case something goes wrong (PID + full process

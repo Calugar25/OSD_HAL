@@ -10,6 +10,7 @@
 #include "thread_internal.h"
 #include "iomu.h"
 #include "filesystem.h"
+#include "vmm.h"
 
 extern void SyscallEntry();
 
@@ -100,6 +101,9 @@ SyscallHandler(
 			break;
 		case SyscallIdFileCreate:
 			status = SyscallFileCreate((char*)pSyscallParameters[0], (QWORD)pSyscallParameters[1], (BOOLEAN)pSyscallParameters[2], (BOOLEAN)pSyscallParameters[3], (UM_HANDLE*)pSyscallParameters[4]);
+			break;
+		case SyscallIdVirtualAlloc:
+			status = SyscallVirtualAlloc((PVOID)pSyscallParameters[0], (QWORD)pSyscallParameters[1], (VMM_ALLOC_TYPE)pSyscallParameters[2], (PAGE_RIGHTS)pSyscallParameters[3], (UM_HANDLE)pSyscallParameters[4], (QWORD)pSyscallParameters[5], (PVOID)pSyscallParameters[6]);
 			break;
         default:
             LOG_ERROR("Unimplemented syscall called from User-space!\n");
@@ -482,3 +486,21 @@ SyscallFileCreate(
 
 	
 }
+
+STATUS
+SyscallVirtualAlloc(
+	IN_OPT      PVOID                   BaseAddress,
+	IN          QWORD                   Size,
+	IN          VMM_ALLOC_TYPE          AllocType,
+	IN          PAGE_RIGHTS             PageRights,
+	IN_OPT      UM_HANDLE               FileHandle,
+	IN_OPT      QWORD                   Key,
+	OUT         PVOID* AllocatedAddress
+) {
+	UNREFERENCED_PARAMETER(Key);
+	UNREFERENCED_PARAMETER(FileHandle);
+	*AllocatedAddress = VmmAllocRegionEx(BaseAddress, Size, AllocType, PageRights, FALSE, NULL, GetCurrentProcess()->VaSpace, GetCurrentProcess()->PagingData, NULL);
+
+	return STATUS_SUCCESS;
+}
+

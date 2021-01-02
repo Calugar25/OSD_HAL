@@ -49,7 +49,10 @@ typedef struct _PROCESS
 	UM_HANDLE LastFileHandle;
 
     // Command line related
+	LOCK numberFramesLock;
 
+	_Guarded_by_(numberFrames)
+	QWORD numberFrames;
     // The command line also contains the ProcessName
     char*                           FullCommandLine;
     DWORD                           NumberOfArguments;

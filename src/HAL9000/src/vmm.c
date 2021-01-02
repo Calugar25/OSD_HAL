@@ -10,6 +10,7 @@
 #include "thread_internal.h"
 #include "process_internal.h"
 #include "mdl.h"
+#include "mem_structures.h"
 
 #define VMM_SIZE_FOR_RESERVATION_METADATA            (5*TB_SIZE)
 
@@ -538,7 +539,7 @@ VmmAllocRegionEx(
     ASSERT(Mdl == NULL || IsBooleanFlagOn(AllocType, VMM_ALLOC_TYPE_NOT_LAZY));
 
     // We currently do not support mapping zero pages
-    ASSERT(!IsBooleanFlagOn(AllocType, VMM_ALLOC_TYPE_ZERO));
+   // ASSERT(!IsBooleanFlagOn(AllocType, VMM_ALLOC_TYPE_ZERO));
 
     // We cannot have both the Mdl and the FileObject non-NULL, the region either is already backed up by some physical
     // frames or it is backed up by a file, or it is not backed up by anything
@@ -551,6 +552,20 @@ VmmAllocRegionEx(
 
     pVaSpace = (VaSpace == NULL) ? &m_vmmData.VmmReservationSpace : VaSpace;
     ASSERT(pVaSpace != NULL);
+
+	//increment the number of pages alocated by this process
+
+	INTR_STATE oldState;
+	PPROCESS process = GetCurrentProcess();
+	QWORD nrFrames = Size / PAGE_SIZE;
+	LockAcquire(&process->numberFramesLock, &oldState);
+	if (process->numberFrames + nrFrames >= PROCESS_MAX_PHYSICAL_FRAMES)
+	{
+		//call the evicttion mechanism in order to find the frame to swap out
+
+	}
+	process->numberFrames = process->numberFrames + nrFrames;
+	LockRelease(&process->numberFramesLock, oldState);
 
     __try
     {
@@ -569,6 +584,16 @@ VmmAllocRegionEx(
             __leave;
         }
         ASSERT(NULL != pBaseAddress);
+
+		//mark the page as needing to be zeroed if the flag is on 
+
+		if (AllocType == VMM_ALLOC_TYPE_ZERO)
+		{
+			pVaSpace->zeroed = TRUE;
+		}
+		else {
+			pVaSpace->zeroed = FALSE;
+		}
 
         if (IsBooleanFlagOn(AllocType, VMM_ALLOC_TYPE_NOT_LAZY))
         {
@@ -706,12 +731,21 @@ VmmFreeRegionEx(
     alignedAddress = NULL;
     alignedSize = 0;
 
+
+
+
     VmReservationSpaceFreeRegion((VaSpace == NULL) ? &m_vmmData.VmmReservationSpace : VaSpace,
                                  Address,
                                  Size,
                                  FreeType,
                                  &alignedAddress,
                                  &alignedSize);
+
+
+	//decrement the user number of physical frames
+	PPROCESS process = GetCurrentProcess();
+	QWORD nrFramesFree = Size / PAGE_SIZE;
+	process->numberFrames = process->numberFrames - nrFramesFree;
 
     if (IsFlagOn(FreeType, VMM_FREE_TYPE_DECOMMIT | VMM_FREE_TYPE_RELEASE ))
     {
@@ -789,6 +823,16 @@ VmmSolvePageFault(
                                                      &pBackingFile,
                                                      &fileOffset);
 
+
+	//if the zeroed boolean is set to true we memzero the memory 
+	PVMM_RESERVATION_SPACE resSpace = ExAllocatePoolWithTag(PoolAllocateZeroMemory, sizeof(VMM_RESERVATION_SPACE), HEAP_PROCESS_TAG, 0);
+	resSpace = _VmmRetrieveReservationSpaceForAddress(FaultingAddress);
+	if (resSpace->zeroed == TRUE)
+	{
+		
+		memzero(PtrOffset(FaultingAddress, fileOffset), PAGE_SIZE );
+
+	}
     __try
     {
         if (bAccessValid)
@@ -846,6 +890,9 @@ VmmSolvePageFault(
                 memzero(PtrOffset(alignedAddress, bytesReadFromFile), PAGE_SIZE - (DWORD)bytesReadFromFile);
                 __writecr0(__readcr0() | CR0_WP);
             }
+
+
+			
 
             if (NULL != pCpu)
             {
