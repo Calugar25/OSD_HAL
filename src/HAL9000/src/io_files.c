@@ -7,6 +7,7 @@
 #include "process.h"
 #include "list.h"
 #include "process_internal.h"
+#include "mutex.h"
 // X:\\ => minimum 3 letters to open root
 #define FILE_NAME_MIN_LEN               3
 
@@ -157,6 +158,20 @@ IoCreateFile(
 
     // currently there are no parameters for the create operation
 
+
+	//check to see if we can create the file
+
+	PPROCESS process = GetCurrentProcess();
+	MutexAcquire(process->countFilesMutex);
+	while (process->countFiles >= PROCESS_MAX_OPEN_FILES)
+	{	
+		MutexRelease(process->countFilesMutex);
+		ExEventWaitForSignal(&process->fileClosed);
+		MutexAcquire(process->countFilesMutex);
+	}
+	process->countFiles = process->countFiles + 1;
+	MutexRelease(process->countFilesMutex);
+
     // create the FILE_OBJECT for the stack location
     _IoAllocateFileObject(pStackLocation, &FileName[FILE_NAME_MIN_LEN - 1], Asynchronous, Create, Directory);
 
@@ -235,6 +250,13 @@ IoCloseFile(
 
     pStackLocation->MajorFunction = IRP_MJ_CLOSE;
     pStackLocation->FileObject = FileHandle;
+
+	PPROCESS process = GetCurrentProcess();
+	MutexAcquire(process->countFilesMutex);
+	process->countFiles = process->countFiles - 1;
+	ExEventSignal(&process->fileClosed);
+	MutexRelease(process->countFilesMutex);
+
 
     __try
     {

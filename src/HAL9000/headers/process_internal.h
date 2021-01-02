@@ -7,6 +7,7 @@
 #include "ex_event.h"
 #include "syscall_defs.h"
 #include "filesystem.h"
+#include "mutex.h"
 
 #define PROCESS_MAX_PHYSICAL_FRAMES     16
 #define PROCESS_MAX_OPEN_FILES          16
@@ -29,6 +30,14 @@ typedef struct _PROCESS
 	UM_HANDLE LastHandle;
 	UM_HANDLE processHandle;
 
+	//count that will hold the number of files opened by this process&protected by mutex
+	PMUTEX countFilesMutex;
+
+	_Guarded_by_(countFilesMutex)
+	DWORD countFiles;
+
+	//we also need an event that will signal when a file will be closed
+	EX_EVENT fileClosed;
 	//list of child processes
 	LIST_ENTRY pList;
     char*                           ProcessName;

@@ -82,13 +82,13 @@ const PROCESS_TEST PROCESS_TESTS[] =
     //{ "ThreadCreateWithArguments", "ThreadCreateWithArguments", NULL},
 
   { "ThreadExit", "ThreadExit", NULL},
-	/*
-    { "ThreadGetTid", "ThreadGetTid", NULL},
+	
+   // { "ThreadGetTid", "ThreadGetTid", NULL},
 
-    { "ThreadWaitBadHandle", "ThreadWaitBadHandle", NULL},
-    { "ThreadWaitClosedHandle", "ThreadWaitClosedHandle", NULL},
-    { "ThreadWaitNormal", "ThreadWaitNormal", NULL},
-    { "ThreadWaitTerminated", "ThreadWaitTerminated", NULL},
+   // { "ThreadWaitBadHandle", "ThreadWaitBadHandle", NULL},
+  //  { "ThreadWaitClosedHandle", "ThreadWaitClosedHandle", NULL},
+   // { "ThreadWaitNormal", "ThreadWaitNormal", NULL},
+   // { "ThreadWaitTerminated", "ThreadWaitTerminated", NULL},
 
     // Project 3: Virtual Memory
 
@@ -125,7 +125,7 @@ const PROCESS_TEST PROCESS_TESTS[] =
     // stack-growth
     { "StackGrowthVariables", "StackGrowthVariables", NULL },
     { "StackGrowthRecursiveFunction", "StackGrowthRecursiveFunction", NULL },
-	*/
+	
 	
 };
 

@@ -562,7 +562,7 @@ _ProcessInit(
 
 		pProcess->fileList = ExAllocatePoolWithTag(PoolAllocateZeroMemory, sizeof(FILE_STRUCT), HEAP_PROCESS_TAG, 0);
 
-		
+		pProcess->countFilesMutex = ExAllocatePoolWithTag(PoolAllocateZeroMemory, sizeof(MUTEX), HEAP_PROCESS_TAG, 0);
 
         // Setup Process->FullCommandLine
         status = _ProcessParseCommandLine(pProcess, Arguments);
@@ -580,6 +580,12 @@ _ProcessInit(
 		pProcess->LastHandle = 0;
 		pProcess->processHandle = 0;
 		pProcess->LastFileHandle = 30;
+
+
+		//project 3
+		MutexInit(pProcess->countFilesMutex, FALSE);
+		pProcess->countFiles = 0;
+		status = ExEventInit(&pProcess->fileClosed, ExEventTypeNotification, FALSE);
 
 
         // Do this as late as possible - we want to interfere as little as possible
