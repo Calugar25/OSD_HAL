@@ -49,7 +49,7 @@ typedef struct _PROCESS
 	UM_HANDLE LastFileHandle;
 
     // Command line related
-	LOCK numberFramesLock;
+	PMUTEX numberFramesLock;
 
 	_Guarded_by_(numberFrames)
 	QWORD numberFrames;

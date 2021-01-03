@@ -93,12 +93,12 @@ const PROCESS_TEST PROCESS_TESTS[] =
     // Project 3: Virtual Memory
 
     // process-quota
-    { "ProcessQuotaGood", "ProcessQuotaGood", NULL},
-    { "ProcessQuotaJustRight", "ProcessQuotaJustRight", NULL},
-    { "ProcessQuotaMore", "ProcessQuotaMore", NULL},
+   // { "ProcessQuotaGood", "ProcessQuotaGood", NULL},
+   // { "ProcessQuotaJustRight", "ProcessQuotaJustRight", NULL},
+   // { "ProcessQuotaMore", "ProcessQuotaMore", NULL},
 
     // swap
-    { "SwapLinear", "SwapLinear", NULL},
+   /* { "SwapLinear", "SwapLinear", NULL},
     { "SwapMultiple", "SwapLinear", NULL, 4},
     { "SwapMultipleShared", "SwapMultipleShared", "0"},
     { "SwapZeros", "SwapZeros", NULL},
@@ -126,7 +126,7 @@ const PROCESS_TEST PROCESS_TESTS[] =
     { "StackGrowthVariables", "StackGrowthVariables", NULL },
     { "StackGrowthRecursiveFunction", "StackGrowthRecursiveFunction", NULL },
 	
-	
+	*/
 };
 
 const DWORD PROCESS_TOTAL_NO_OF_TESTS = ARRAYSIZE(PROCESS_TESTS);

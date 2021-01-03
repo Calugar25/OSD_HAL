@@ -473,6 +473,7 @@ GetCurrentProcess(
     void
     )
 {
+
     PTHREAD pThread = GetCurrentThread();
     ASSERT(pThread != NULL);
 
@@ -590,7 +591,7 @@ _ProcessInit(
 
 
 		//init the variables for counting the number of alocated frames
-		LockInit(&pProcess->numberFramesLock);
+		MutexInit(pProcess->numberFramesLock,FALSE);
 		pProcess->numberFrames = 0;
 
         // Do this as late as possible - we want to interfere as little as possible

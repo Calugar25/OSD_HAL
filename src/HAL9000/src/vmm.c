@@ -11,6 +11,7 @@
 #include "process_internal.h"
 #include "mdl.h"
 #include "mem_structures.h"
+#include "mutex.h"
 
 #define VMM_SIZE_FOR_RESERVATION_METADATA            (5*TB_SIZE)
 
@@ -554,18 +555,21 @@ VmmAllocRegionEx(
     ASSERT(pVaSpace != NULL);
 
 	//increment the number of pages alocated by this process
+	LOG_TRACE("In incrementing the number of pages");
+	if (GetCurrentThread()!=NULL) {
+		
+		PPROCESS process = GetCurrentProcess();
+		
+		QWORD nrFrames = Size / PAGE_SIZE;
+		//MutexAcquire(&process->numberFramesLock);
+		if (process->numberFrames + nrFrames >= PROCESS_MAX_PHYSICAL_FRAMES)
+		{
+			//call the evicttion mechanism in order to find the frame to swap out
 
-	INTR_STATE oldState;
-	PPROCESS process = GetCurrentProcess();
-	QWORD nrFrames = Size / PAGE_SIZE;
-	LockAcquire(&process->numberFramesLock, &oldState);
-	if (process->numberFrames + nrFrames >= PROCESS_MAX_PHYSICAL_FRAMES)
-	{
-		//call the evicttion mechanism in order to find the frame to swap out
-
+		}
+		process->numberFrames = process->numberFrames + nrFrames;
+		//MutexRelease(process->numberFramesLock);
 	}
-	process->numberFrames = process->numberFrames + nrFrames;
-	LockRelease(&process->numberFramesLock, oldState);
 
     __try
     {
@@ -710,43 +714,46 @@ VmmAllocRegionEx(
 
 void
 VmmFreeRegionEx(
-    IN      PVOID                   Address,
-    _When_(VMM_FREE_TYPE_RELEASE == FreeType, _Reserved_)
-    _When_(VMM_FREE_TYPE_RELEASE != FreeType, IN)
-            QWORD                   Size,
-    IN      VMM_FREE_TYPE           FreeType,
-    IN      BOOLEAN                 Release,
-    IN_OPT  PVMM_RESERVATION_SPACE  VaSpace,
-    IN_OPT  PPAGING_LOCK_DATA       PagingData
-    )
+	IN      PVOID                   Address,
+	_When_(VMM_FREE_TYPE_RELEASE == FreeType, _Reserved_)
+	_When_(VMM_FREE_TYPE_RELEASE != FreeType, IN)
+	QWORD                   Size,
+	IN      VMM_FREE_TYPE           FreeType,
+	IN      BOOLEAN                 Release,
+	IN_OPT  PVMM_RESERVATION_SPACE  VaSpace,
+	IN_OPT  PPAGING_LOCK_DATA       PagingData
+)
 {
-    PVOID alignedAddress;
-    QWORD alignedSize;
+	PVOID alignedAddress;
+	QWORD alignedSize;
 
-    ASSERT(Address != NULL);
-    ASSERT(IsBooleanFlagOn( FreeType, VMM_FREE_TYPE_RELEASE ) ^ IsBooleanFlagOn(FreeType, VMM_FREE_TYPE_DECOMMIT ));
-    ASSERT((IsBooleanFlagOn(FreeType, VMM_FREE_TYPE_RELEASE) && (Size == 0))
-           || (IsBooleanFlagOn(FreeType, VMM_FREE_TYPE_DECOMMIT) && (Size != 0)));
+	ASSERT(Address != NULL);
+	ASSERT(IsBooleanFlagOn(FreeType, VMM_FREE_TYPE_RELEASE) ^ IsBooleanFlagOn(FreeType, VMM_FREE_TYPE_DECOMMIT));
+	ASSERT((IsBooleanFlagOn(FreeType, VMM_FREE_TYPE_RELEASE) && (Size == 0))
+		|| (IsBooleanFlagOn(FreeType, VMM_FREE_TYPE_DECOMMIT) && (Size != 0)));
 
-    alignedAddress = NULL;
-    alignedSize = 0;
-
-
+	alignedAddress = NULL;
+	alignedSize = 0;
 
 
-    VmReservationSpaceFreeRegion((VaSpace == NULL) ? &m_vmmData.VmmReservationSpace : VaSpace,
-                                 Address,
-                                 Size,
-                                 FreeType,
-                                 &alignedAddress,
-                                 &alignedSize);
+
+
+	VmReservationSpaceFreeRegion((VaSpace == NULL) ? &m_vmmData.VmmReservationSpace : VaSpace,
+		Address,
+		Size,
+		FreeType,
+		&alignedAddress,
+		&alignedSize);
 
 
 	//decrement the user number of physical frames
+	if (GetCurrentThread() != NULL) {
+
 	PPROCESS process = GetCurrentProcess();
 	QWORD nrFramesFree = Size / PAGE_SIZE;
 	process->numberFrames = process->numberFrames - nrFramesFree;
 
+	}
     if (IsFlagOn(FreeType, VMM_FREE_TYPE_DECOMMIT | VMM_FREE_TYPE_RELEASE ))
     {
         ASSERT( NULL != alignedAddress);
@@ -780,6 +787,8 @@ VmmSolvePageFault(
     QWORD fileOffset;
     BOOLEAN bKernelAddress;
     QWORD bytesReadFromFile;
+
+	PVMM_RESERVATION_SPACE resSpace;
 
     ASSERT(INTR_OFF == CpuIntrGetState());
     ASSERT(PagingData != NULL);
@@ -825,12 +834,12 @@ VmmSolvePageFault(
 
 
 	//if the zeroed boolean is set to true we memzero the memory 
-	PVMM_RESERVATION_SPACE resSpace = ExAllocatePoolWithTag(PoolAllocateZeroMemory, sizeof(VMM_RESERVATION_SPACE), HEAP_PROCESS_TAG, 0);
+	//PVMM_RESERVATION_SPACE resSpace = ExAllocatePoolWithTag(PoolAllocateZeroMemory, sizeof(VMM_RESERVATION_SPACE), HEAP_PROCESS_TAG, 0);
 	resSpace = _VmmRetrieveReservationSpaceForAddress(FaultingAddress);
 	if (resSpace->zeroed == TRUE)
 	{
 		
-		memzero(PtrOffset(FaultingAddress, fileOffset), PAGE_SIZE );
+		memzero(FaultingAddress, PAGE_SIZE );
 
 	}
     __try
