@@ -251,6 +251,8 @@ ProcessCreate(
         }
         LOG_TRACE_PROCESS("Successfully initialized process!\n");
 
+
+
         // This function must be called before MmuCreateAddressSpaceForProcess to be able to
         // determine the address from which the VA allocations should start (so they'll not
         // conflict with the PE image)
@@ -277,6 +279,10 @@ ProcessCreate(
             LOG_FUNC_ERROR("UmApplicationRun", status);
             __leave;
         }
+
+		//update the child process list with the curent process
+		InsertTailList(&GetCurrentProcess()->childProcess, &pProcess->childProcess);
+
 
         LOG_TRACE_PROCESS("Successfully ran UM application!\n");
     }
@@ -400,6 +406,25 @@ ProcessTerminate(
     }
     LockRelease(&Process->ThreadListLock, oldState);
 
+
+	//go through the list of child proceses that this process has and move all the dying processes to the system
+	//process
+	INTR_STATE dummyState;
+	LockAcquire(&Process->childLock, &dummyState);
+	LIST_ITERATOR it;
+	ListIteratorInit(&Process->childProcess, &it);
+	PLIST_ENTRY pEntry;
+	PPROCESS sysProc = ProcessRetrieveSystemProcess();
+	while ((pEntry = ListIteratorNext(&it)) != NULL)
+	 {
+		      PPROCESS proc = CONTAINING_RECORD(pEntry, PROCESS, childProcess);
+		      //associate every element from the child process list to the system process
+			  InsertTailList(&sysProc->childProcess, &proc->childProcess);
+			  RemoveEntryList(&proc->childProcess);
+	}
+
+	LockRelease(&Process->childLock, dummyState);
+
     if (bFoundCurThreadInProcess)
     {
         /// TODO: find out if we should also dereference the process here
@@ -506,6 +531,12 @@ _ProcessInit(
 
         InitializeListHead(&pProcess->ThreadList);
         LockInit(&pProcess->ThreadListLock);
+
+
+
+		//initialize for the list of children for each process
+		InitializeListHead(&pProcess->childProcess);
+		LockInit(&pProcess->childLock);
 
         // Do this as late as possible - we want to interfere as little as possible
         // with the system management in case something goes wrong (PID + full process

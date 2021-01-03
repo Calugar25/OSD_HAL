@@ -10,6 +10,7 @@
 #include "thread.h"
 #include "vmm.h"
 #include "thread_internal.h"
+#include "iomu.h"
 
 extern void SyscallEntry();
 
@@ -101,6 +102,9 @@ SyscallHandler(
 			break;
 		case SyscallIdVirtualAlloc:
 			status = SyscallVirtualAlloc((PVOID)pSyscallParameters[0], (QWORD)pSyscallParameters[1], (VMM_ALLOC_TYPE)pSyscallParameters[2], (PAGE_RIGHTS)pSyscallParameters[3], (UM_HANDLE)pSyscallParameters[4], (QWORD)pSyscallParameters[5],(PVOID)pSyscallParameters[6]);
+			break;
+		case SyscallIdProcessCreate:
+			status = SyscallProcessCreate((char*)pSyscallParameters[0], (QWORD)pSyscallParameters[1], (char*)pSyscallParameters[2], (QWORD)pSyscallParameters[3], (UM_HANDLE*)pSyscallParameters[4]);
 			break;
         default:
             LOG_ERROR("Unimplemented syscall called from User-space!\n");
@@ -417,5 +421,72 @@ SyscallVirtualAlloc(
 
 	return STATUS_SUCCESS;
 }
+//mplement a system call SyscallIdMemset which effectively does a memset on a requested virtual address. 
+STATUS
+SyscallMemset(
+	OUT_WRITES(BytesToWrite)    PBYTE   Address,
+	IN                          DWORD   BytesToWrite,
+	IN                          BYTE    ValueToWrite
+) {
+	if (Address == NULL)
+	{	
+		LOG("the syscall was unsuccuessfull");
+		return STATUS_UNSUCCESSFUL;
+	}
+	memset(Address, ValueToWrite, BytesToWrite);
+	return STATUS_SUCCESS;
+}
+
+//Maintain the list of children for each process. If the parent of a process dies, you should move the dying process children to have as the parent the system process.
+
+STATUS
+SyscallProcessCreate(
+	IN_READS_Z(PathLength)
+	char* ProcessPath,
+	IN          QWORD               PathLength,
+	IN_READS_OPT_Z(ArgLength)
+	char* Arguments,
+	IN          QWORD               ArgLength,
+	OUT         UM_HANDLE* ProcessHandle
+) {
+	//UNREFERENCED_PARAMETER(PathLength);
+	UNREFERENCED_PARAMETER(ArgLength);
+
+	if (ProcessPath == NULL)
+	{
+		return STATUS_UNSUCCESSFUL;
+	}
+
+	if (PathLength == 0)
+	{
+		return STATUS_UNSUCCESSFUL;
+	}
 
 
+	char fullPath[MAX_PATH];
+
+	snprintf(fullPath, MAX_PATH,
+		"%s%s\\%s", IomuGetSystemPartitionPath(), "APPLICATIONS",
+		ProcessPath);
+
+	//LOG("this is the full path %s", fullPath);
+
+	PPROCESS process;
+	STATUS status;
+
+
+	status = ProcessCreate(
+		fullPath,
+		Arguments,
+		&process);
+
+
+	if (process != NULL)
+	{
+		*ProcessHandle = process->Id;
+	}
+
+	return status;
+
+
+}

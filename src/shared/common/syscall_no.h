@@ -4,6 +4,8 @@ typedef enum _SYSCALL_ID
 {
     SyscallIdIdentifyVersion,
 
+	//syscall memset which does a memset on a requested virual address
+	SyscallIdMemset,
     // Thread Management
     SyscallIdThreadExit,
     SyscallIdThreadCreate,

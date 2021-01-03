@@ -149,7 +149,7 @@ _IsrExceptionHandler(
         PVOID* pCurrentStackItem;
         DWORD noOfStackElementsToDump;
         PPCPU pCpu;
-
+		//modify so that is does not crash the kernel
 
 		if (!GdtIsSegmentPrivileged((WORD)StackPointer->Registers.CS))
 		{
