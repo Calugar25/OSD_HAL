@@ -22,9 +22,7 @@ typedef struct _VMM_RESERVATION_SPACE
 
     RW_SPINLOCK         ReservationLock;
 
-	//boolean to know if the page must be zeroed 
-	BOOLEAN zeroed;
-
+	
     _Guarded_by_(ReservationLock)
     PBYTE               FreeBitmapAddress;
 
@@ -97,7 +95,8 @@ VmReservationCanAddressBeAccessed(
     OUT                     PAGE_RIGHTS*            MemoryRights,
     OUT                     BOOLEAN*                Uncacheable,
     OUT_PTR_MAYBE_NULL      PFILE_OBJECT*           BackingFile,
-    OUT                     QWORD*                  FileOffset
+    OUT                     QWORD*                  FileOffset,
+	OUT				BOOLEAN*				zeroed
     );
 
 STATUS
@@ -111,6 +110,7 @@ VmReservationSpaceAllocRegion(
     IN_OPT                  PFILE_OBJECT            FileObject,
     OUT                     PVOID*                  MappedAddress,
     OUT                     QWORD*                  MappedSize
+	
     );
 
 void

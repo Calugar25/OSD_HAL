@@ -38,6 +38,9 @@ typedef struct _VMM_RESERVATION
     // Indicates the file which holds the data
     PFILE_OBJECT            BackingFile;
 
+
+	//bolean to know if the page is zeroed
+	BOOLEAN zeroed;
     // Describes which pages of the virtual memory reserved are actually
     // committed, i.e. which are valid when a #PF occurs
     BITMAP                  CommitBitmap;
@@ -126,7 +129,8 @@ _VmChangeVaReservationState(
     IN      VMM_ALLOC_TYPE          AllocationType,
     IN      PAGE_RIGHTS             PageRights,
     IN      BOOLEAN                 Uncacheable,
-    IN_OPT  PFILE_OBJECT            FileObject
+    IN_OPT  PFILE_OBJECT            FileObject,
+	IN		BOOLEAN					zero
     );
 
 // This function should be called only on a copy of the reservation to be uninitialized
@@ -374,7 +378,8 @@ _VmChangeVaReservationState(
     IN      VMM_ALLOC_TYPE          AllocationType,
     IN      PAGE_RIGHTS             PageRights,
     IN      BOOLEAN                 Uncacheable,
-    IN_OPT  PFILE_OBJECT            FileObject
+    IN_OPT  PFILE_OBJECT            FileObject,
+	IN		BOOLEAN					zero
     )
 {
     PVMM_RESERVATION pReservation;
@@ -441,6 +446,8 @@ _VmChangeVaReservationState(
                                 FileObject,
                                 pReservation
                                 );
+
+		pReservation->zeroed = zero;
         break;
     case VMM_ALLOC_TYPE_COMMIT:
         ASSERT( NULL != pReservation );
@@ -625,13 +632,14 @@ _VmIsVaCommited(
 
 BOOLEAN
 VmReservationCanAddressBeAccessed(
-    INOUT                   PVMM_RESERVATION_SPACE  ReservationSpace,
-    IN                      PVOID                   FaultingAddress,
-    IN                      PAGE_RIGHTS             RightsRequested,
-    OUT                     PAGE_RIGHTS*            MemoryRights,
-    OUT                     BOOLEAN*                Uncacheable,
-    OUT_PTR_MAYBE_NULL      PFILE_OBJECT*           BackingFile,
-    OUT                     QWORD*                  FileOffset
+	INOUT                   PVMM_RESERVATION_SPACE  ReservationSpace,
+	IN                      PVOID                   FaultingAddress,
+	IN                      PAGE_RIGHTS             RightsRequested,
+	OUT                     PAGE_RIGHTS* MemoryRights,
+	OUT                     BOOLEAN* Uncacheable,
+	OUT_PTR_MAYBE_NULL      PFILE_OBJECT* BackingFile,
+	OUT                     QWORD* FileOffset,
+	OUT						BOOLEAN* zeroed
     )
 {
     BOOLEAN bSolvedPageFault;
@@ -643,6 +651,7 @@ VmReservationCanAddressBeAccessed(
     QWORD fileOffset;
     PCPU* pCpu;
     STATUS status;
+	BOOLEAN zer;
 
     ASSERT(ReservationSpace != NULL);
     ASSERT(MemoryRights != NULL);
@@ -664,6 +673,8 @@ VmReservationCanAddressBeAccessed(
     fileOffset = 0;
     pCpu = GetCurrentPcpu();
     status = STATUS_SUCCESS;
+	//initialize zer to false;
+	zer = FALSE;
 
     __try
     {
@@ -713,6 +724,7 @@ VmReservationCanAddressBeAccessed(
 
             pageRights = pReservation->PageRights;
             uncacheable = pReservation->Uncacheable;
+			zer = pReservation->zeroed;
 
             pBackingFile = pReservation->BackingFile;
             if (pBackingFile != NULL)
@@ -745,6 +757,10 @@ VmReservationCanAddressBeAccessed(
 
             *BackingFile = pBackingFile;
             *FileOffset = fileOffset;
+			//we get the boolean value zero so we can return it back 
+			*zeroed = zer;
+			
+			
         }
     }
 
@@ -762,6 +778,7 @@ VmReservationSpaceAllocRegion(
     IN_OPT  PFILE_OBJECT            FileObject,
     OUT     PVOID*                  MappedAddress,
     OUT     QWORD*                  MappedSize
+
     )
 {
     PVOID pBaseAddress;
@@ -808,7 +825,15 @@ VmReservationSpaceAllocRegion(
     {
         pCpu->VmmMemoryAccess = TRUE;
     }
-
+	BOOLEAN zeroSend;
+	if (IsBooleanFlagOn(AllocType, VMM_ALLOC_TYPE_ZERO))
+	{
+		zeroSend = TRUE;
+	}
+	else
+	{
+		zeroSend = FALSE;
+	}
     __try
     {
         if (IsBooleanFlagOn(AllocType, VMM_ALLOC_TYPE_RESERVE))
@@ -820,7 +845,7 @@ VmReservationSpaceAllocRegion(
                                                 VMM_ALLOC_TYPE_RESERVE,
                                                 Rights,
                                                 Uncacheable,
-                                                FileObject
+                                                FileObject,zeroSend
             );
             if (!SUCCEEDED(status))
             {
@@ -840,7 +865,8 @@ VmReservationSpaceAllocRegion(
                                                  VMM_ALLOC_TYPE_COMMIT,
                                                  Rights,
                                                  Uncacheable,
-                                                 FileObject
+                                                 FileObject,
+												zeroSend
             );
             if (!SUCCEEDED(status))
             {

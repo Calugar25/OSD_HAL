@@ -504,6 +504,7 @@ _ProcessInit(
     nameSize = (strlen(Name)+1)*sizeof(char);
     bRefCntInitialized = FALSE;
 
+	LOG_ERROR("IONICA0");
     __try
     {
         pProcess = ExAllocatePoolWithTag(PoolAllocateZeroMemory, sizeof(PROCESS), HEAP_PROCESS_TAG, 0);
@@ -561,11 +562,13 @@ _ProcessInit(
         }
         strcpy(pProcess->ProcessName, Name);
 
+		LOG_ERROR("IONICA1");
 		pProcess->fileList = ExAllocatePoolWithTag(PoolAllocateZeroMemory, sizeof(FILE_STRUCT), HEAP_PROCESS_TAG, 0);
 
 		pProcess->countFilesMutex = ExAllocatePoolWithTag(PoolAllocateZeroMemory, sizeof(MUTEX), HEAP_PROCESS_TAG, 0);
 
 
+		LOG_ERROR("IONICA2");
         // Setup Process->FullCommandLine
         status = _ProcessParseCommandLine(pProcess, Arguments);
         if (!SUCCEEDED(status))
@@ -575,6 +578,8 @@ _ProcessInit(
         }
         LOG_TRACE_PROCESS("Successfully parsed process command line!\n");
 
+
+		LOG_ERROR("IONICA3");
         InitializeListHead(&pProcess->ThreadList);
 		InitializeListHead(&pProcess->pList);
         LockInit(&pProcess->ThreadListLock);
@@ -593,6 +598,7 @@ _ProcessInit(
 		//init the variables for counting the number of alocated frames
 		MutexInit(pProcess->numberFramesLock,FALSE);
 		pProcess->numberFrames = 0;
+		LOG_ERROR("IONICA");
 
         // Do this as late as possible - we want to interfere as little as possible
         // with the system management in case something goes wrong (PID + full process

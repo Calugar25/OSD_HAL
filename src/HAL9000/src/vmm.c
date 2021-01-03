@@ -13,6 +13,7 @@
 #include "mem_structures.h"
 #include "mutex.h"
 
+
 #define VMM_SIZE_FOR_RESERVATION_METADATA            (5*TB_SIZE)
 
 typedef struct _VMM_DATA
@@ -554,6 +555,8 @@ VmmAllocRegionEx(
     pVaSpace = (VaSpace == NULL) ? &m_vmmData.VmmReservationSpace : VaSpace;
     ASSERT(pVaSpace != NULL);
 
+	
+
 	//increment the number of pages alocated by this process
 	LOG_TRACE("In incrementing the number of pages");
 	if (GetCurrentThread()!=NULL) {
@@ -562,15 +565,19 @@ VmmAllocRegionEx(
 		
 		QWORD nrFrames = Size / PAGE_SIZE;
 		//MutexAcquire(&process->numberFramesLock);
+		LOG_ERROR("this is the value we want %d",process->numberFrames);
+		__halt();
 		if (process->numberFrames + nrFrames >= PROCESS_MAX_PHYSICAL_FRAMES)
 		{
 			//call the evicttion mechanism in order to find the frame to swap out
 
 		}
+		
 		process->numberFrames = process->numberFrames + nrFrames;
 		//MutexRelease(process->numberFramesLock);
 	}
 
+	
     __try
     {
         status = VmReservationSpaceAllocRegion(pVaSpace,
@@ -581,7 +588,8 @@ VmmAllocRegionEx(
                                                Uncacheable,
                                                FileObject,
                                                &pBaseAddress,
-                                               &alignedSize);
+                                               &alignedSize
+												);
         if (!SUCCEEDED(status))
         {
             LOG_FUNC_ERROR("VmReservationSpaceAllocRegion", status);
@@ -591,13 +599,7 @@ VmmAllocRegionEx(
 
 		//mark the page as needing to be zeroed if the flag is on 
 
-		if (AllocType == VMM_ALLOC_TYPE_ZERO)
-		{
-			pVaSpace->zeroed = TRUE;
-		}
-		else {
-			pVaSpace->zeroed = FALSE;
-		}
+		
 
         if (IsBooleanFlagOn(AllocType, VMM_ALLOC_TYPE_NOT_LAZY))
         {
@@ -637,6 +639,14 @@ VmmAllocRegionEx(
                                      Uncacheable,
                                      PagingData
                 );
+
+				//if the mem is not lazy we set it to 0 
+				if (IsBooleanFlagOn(AllocType, VMM_ALLOC_TYPE_ZERO))
+				{
+					memzero(pBaseAddress, (DWORD)alignedSize);
+				}
+				
+
 
                 // Check if the mapping is backed up by a file
                 if (FileObject != NULL)
@@ -788,7 +798,7 @@ VmmSolvePageFault(
     BOOLEAN bKernelAddress;
     QWORD bytesReadFromFile;
 
-	PVMM_RESERVATION_SPACE resSpace;
+	//PVMM_RESERVATION_SPACE resSpace;
 
     ASSERT(INTR_OFF == CpuIntrGetState());
     ASSERT(PagingData != NULL);
@@ -822,6 +832,8 @@ VmmSolvePageFault(
     fileOffset = 0;
     bytesReadFromFile = 0;
 
+
+	BOOLEAN getZero;
     // See if the VA is already committed and retrieve its description (the page rights with which it was mapped,
     // cacheability and for memory backed by files the FILE_OBJECT and corresponding offset in file)
     bAccessValid = VmReservationCanAddressBeAccessed(_VmmRetrieveReservationSpaceForAddress(FaultingAddress),
@@ -830,18 +842,11 @@ VmmSolvePageFault(
                                                      &pageRights,
                                                      &uncacheable,
                                                      &pBackingFile,
-                                                     &fileOffset);
+                                                     &fileOffset,&getZero);
 
-
+	
 	//if the zeroed boolean is set to true we memzero the memory 
-	//PVMM_RESERVATION_SPACE resSpace = ExAllocatePoolWithTag(PoolAllocateZeroMemory, sizeof(VMM_RESERVATION_SPACE), HEAP_PROCESS_TAG, 0);
-	resSpace = _VmmRetrieveReservationSpaceForAddress(FaultingAddress);
-	if (resSpace->zeroed == TRUE)
-	{
-		
-		memzero(FaultingAddress, PAGE_SIZE );
 
-	}
     __try
     {
         if (bAccessValid)
@@ -857,6 +862,8 @@ VmmSolvePageFault(
 
             alignedAddress = (PVOID)AlignAddressLower(FaultingAddress, PAGE_SIZE);
 
+
+
             // 2. Map the aligned faulting address to the newly acquired physical frame
             MmuMapMemoryInternal(pa,
                                  PAGE_SIZE,
@@ -867,6 +874,11 @@ VmmSolvePageFault(
                                  PagingData
                                  );
 
+			//we have aligned Address so we can zero the page here 
+			if (getZero == TRUE)
+			{	//add only one page 
+				memzero(alignedAddress, PAGE_SIZE);
+			}
             // 3. If the virtual address is backed by a file read its contents
             if (pBackingFile != NULL)
             {
