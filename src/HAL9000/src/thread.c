@@ -36,8 +36,11 @@ typedef struct _THREAD_SYSTEM_DATA
 
     LOCK                ReadyThreadsLock;
 	
+	
+
     _Guarded_by_(ReadyThreadsLock)
     LIST_ENTRY          ReadyThreadsList;
+	//volatile DWORD ReadyThreadsCount;
 	volatile DWORD AllThreadsCount;
 } THREAD_SYSTEM_DATA, *PTHREAD_SYSTEM_DATA;
 
@@ -58,6 +61,8 @@ _ThreadSystemGetNextTid(
 	
     return _InterlockedExchangeAdd64(&__currentTid, TID_INCREMENT);
 }
+
+
 
 static
 STATUS
@@ -153,6 +158,7 @@ ThreadSystemPreinit(
     InitializeListHead(&m_threadSystemData.ReadyThreadsList);
     LockInit(&m_threadSystemData.ReadyThreadsLock);
 	m_threadSystemData.AllThreadsCount = 0;
+	//m_threadSystemData.ReadyThreadsCount = 0;
 }
 
 STATUS
@@ -488,6 +494,7 @@ ThreadYield(
     if (pThread != pCpu->ThreadData.IdleThread)
     {
         InsertTailList(&m_threadSystemData.ReadyThreadsList, &pThread->ReadyList);
+		//m_threadSystemData.ReadyThreadsCount= m_threadSystemData.ReadyThreadsCount+1;
     }
     if (!bForcedYield)
     {
@@ -545,6 +552,8 @@ ThreadUnblock(
 
     LockAcquire(&m_threadSystemData.ReadyThreadsLock, &dummyState);
     InsertTailList(&m_threadSystemData.ReadyThreadsList, &Thread->ReadyList);
+	//increment the count
+	//m_threadSystemData.ReadyThreadsCount= m_threadSystemData.ReadyThreadsCount+1;
     Thread->State = ThreadStateReady;
     LockRelease(&m_threadSystemData.ReadyThreadsLock, dummyState );
     LockRelease(&Thread->BlockLock, oldState);
@@ -838,6 +847,7 @@ _ThreadInit(
 		LockRelease(&m_threadSystemData.AllThreadsLock, oldIntrState);
 
 		_InterlockedIncrement(&m_threadSystemData.AllThreadsCount);
+		
 	}
 
 
@@ -1164,6 +1174,8 @@ _ThreadGetReadyThread(
     pNextThread = NULL;
 
     pEntry = RemoveHeadList(&m_threadSystemData.ReadyThreadsList);
+	//decrement the count of ready threads
+	//m_threadSystemData.ReadyThreadsCount= m_threadSystemData.ReadyThreadsCount-1;
     if (pEntry == &m_threadSystemData.ReadyThreadsList)
     {
         pNextThread = GetCurrentPcpu()->ThreadData.IdleThread;
@@ -1288,4 +1300,32 @@ _ThreadKernelFunction(
 
     ThreadExit(exitStatus);
     NOT_REACHED;
+}
+
+
+
+//myfunction
+
+void myFunction()
+{
+	LOG("this is the number of threads in the wholse stystem %d\n", m_threadSystemData.AllThreadsCount);
+	DWORD readyThreads = 0;
+	
+	INTR_STATE oldState;
+	DWORD cnt = 0;
+	LockAcquire(&m_threadSystemData.ReadyThreadsLock, &oldState);
+	while ( _ThreadGetReadyThread()!=NULL&&cnt<m_threadSystemData.AllThreadsCount)
+	{
+		
+			LOG("IM HWW");
+			cnt++;
+			readyThreads = readyThreads + 1;
+		
+	}
+	
+	LOG("this is the number of activwe threads in the whole system %d\n", readyThreads);
+	DWORD blocked = m_threadSystemData.AllThreadsCount - readyThreads;
+	LOG("this is the number of blocked threads in the system %d\n ", blocked);
+	LockRelease(&m_threadSystemData.ReadyThreadsLock, oldState);
+
 }

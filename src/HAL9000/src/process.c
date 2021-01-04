@@ -101,7 +101,7 @@ _ProcessParseCommandLine(
 // Called when the reference count reaches zero
 static FUNC_FreeFunction            _ProcessDestroy;
 
-_No_competing_thread_
+
 void
 ProcessSystemPreinit(
     void
@@ -786,7 +786,7 @@ _ProcessDestroy(
     // Because the system process will never be destroyed it is ok to free
     // these memory addresses unconditionally
     MmuDestroyAddressSpaceForProcess(Process);
-
+	
     if (Process->Id != 0)
     {
         // This should be done only after MmuDestroyVirtualSpaceForProcess, that

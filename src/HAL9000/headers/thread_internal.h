@@ -118,6 +118,11 @@ ThreadSystemPreinit(
     void
     );
 
+
+//myfunction
+void myFunction(void);
+
+
 //******************************************************************************
 // Function:     ThreadSystemInitMainForCurrentCPU
 // Description:  Call by each CPU to initialize the main execution thread. Has a

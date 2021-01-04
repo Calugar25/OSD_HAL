@@ -13,7 +13,7 @@
 #include "cmd_net_helper.h"
 #include "cmd_basic.h"
 #include "boot_module.h"
-
+#include "thread_internal.h"
 #pragma warning(push)
 
 // warning C4029: declared formal parameter list different from definition
@@ -24,6 +24,7 @@
 #define CMD_EXIT            "exit"
 
 static FUNC_GenericCommand  _CmdPrintHelp;
+static FUNC_GenericCommand	_ThreadInfo;
 
 // warning C4212: nonstandard extension used: function declaration used ellipsis
 #pragma warning(push)
@@ -72,7 +73,7 @@ static const COMMAND_DEFINITION COMMANDS[] =
              "\n\t$NO_OF_THREADS the number of threads for running the test,"
              "if the number is not specified then it will run on 2 * NumberOfProcessors",
              CmdRunTest, 1, 2},
-	//{"test","Display a test message",test,0,0},
+	{"threadinfo","Display a test message",_ThreadInfo,0,0},
     { "processes", "Displays all processes", CmdListProcesses, 0, 0},
     { "procstat", "0x$PID - displays information about a process", CmdProcessDump, 1, 1},
     { "procstart", "$PATH_TO_EXE - starts a process", CmdStartProcess, 1, 1},
@@ -271,6 +272,19 @@ _CmdExecLine(
     }
 
     return bExit;
+}
+
+
+static
+void
+(__cdecl _ThreadInfo)(
+	IN      QWORD           NumberOfParameters
+	)
+{
+	ASSERT(NumberOfParameters == 0);
+
+	myFunction();
+	
 }
 
 static
