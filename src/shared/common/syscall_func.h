@@ -329,3 +329,23 @@ SyscallMemset(
 	IN                          DWORD   BytesToWrite,
 	IN                          BYTE    ValueToWrite
 );
+
+
+STATUS
+SyscallDisableSyscalls(
+	IN      BOOLEAN     Disable
+);
+
+STATUS
+SyscallSetGlobalVariable(
+	IN_READS_Z(VarLength)           char* VariableName,
+	IN                              DWORD   VarLength,
+	IN                              QWORD   Value
+);
+
+STATUS
+SyscallGetGlobalVariable(
+	IN_READS_Z(VarLength)           char* VariableName,
+	IN                              DWORD   VarLength,
+	OUT                             PQWORD  Value
+);

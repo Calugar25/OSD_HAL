@@ -9,6 +9,15 @@
 #define PROCESS_MAX_PHYSICAL_FRAMES     16
 #define PROCESS_MAX_OPEN_FILES          16
 
+
+//new structure to hold the global variable for problem 7 at userprog 
+typedef struct _GLOBAL {
+	char* varName;
+	DWORD varLength;
+	QWORD Value;
+	LIST_ENTRY globalEntry;
+}GLOBAL,*PGLOBAL;
+
 typedef struct _PROCESS
 {
     REF_COUNT                       RefCnt;
@@ -66,6 +75,9 @@ typedef struct _PROCESS
 
 	_Guarded_by_(childLock)
 	LIST_ENTRY childProcess;
+
+	//a list entry so we can keep a list of structures that hold a global variable 
+	LIST_ENTRY globalVarList;
 
 } PROCESS, *PPROCESS;
 

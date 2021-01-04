@@ -538,6 +538,10 @@ _ProcessInit(
 		InitializeListHead(&pProcess->childProcess);
 		LockInit(&pProcess->childLock);
 
+		//initialise the list head that will hold the structures for the global variable
+
+		InitializeListHead(&pProcess->globalVarList);
+
         // Do this as late as possible - we want to interfere as little as possible
         // with the system management in case something goes wrong (PID + full process
         // list management)

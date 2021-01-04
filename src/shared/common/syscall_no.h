@@ -6,6 +6,12 @@ typedef enum _SYSCALL_ID
 
 	//syscall memset which does a memset on a requested virual address
 	SyscallIdMemset,
+	//syscalls to set and get the global variable 
+
+	SyscallIdSetGlobalVariable,
+	SyscallIdGetGlobalVariable,
+	//syscall to disable all the other syscalls
+	SyscallIdDisableSyscalls,
     // Thread Management
     SyscallIdThreadExit,
     SyscallIdThreadCreate,

@@ -16,6 +16,9 @@ extern void SyscallEntry();
 
 #define SYSCALL_IF_VERSION_KM       SYSCALL_IMPLEMENTED_IF_VERSION
 
+//boolean to disable all syscalls problem 6
+BOOLEAN disableSyscalls = TRUE;
+
 void
 SyscallHandler(
     INOUT   COMPLETE_PROCESSOR_STATE    *CompleteProcessorState
@@ -66,6 +69,18 @@ SyscallHandler(
         pSyscallParameters = (PQWORD)usermodeProcessorState->RegisterValues[RegisterRbp] + 1;
 
         // Dispatch syscalls
+		if (disableSyscalls == FALSE)
+		{
+			LOG("the syscalls are disable so we cant access only the syscall that enables them");
+			if (sysCallId == SyscallIdDisableSyscalls)
+			{
+				status = SyscallDisableSyscalls((BOOLEAN)*pSyscallParameters);
+				
+			}
+		}
+		else {
+
+		
         switch (sysCallId)
         {
         case SyscallIdIdentifyVersion:
@@ -106,11 +121,21 @@ SyscallHandler(
 		case SyscallIdProcessCreate:
 			status = SyscallProcessCreate((char*)pSyscallParameters[0], (QWORD)pSyscallParameters[1], (char*)pSyscallParameters[2], (QWORD)pSyscallParameters[3], (UM_HANDLE*)pSyscallParameters[4]);
 			break;
+		case SyscallIdDisableSyscalls:
+			status = SyscallDisableSyscalls((BOOLEAN)*pSyscallParameters);
+			break;
+		case SyscallIdGetGlobalVariable:
+			status = SyscallGetGlobalVariable((char*)pSyscallParameters[0], (DWORD)pSyscallParameters[1], (PQWORD)pSyscallParameters[2]);
+			break;
+		case SyscallIdSetGlobalVariable:
+			status = SyscallSetGlobalVariable((char*)pSyscallParameters[0], (DWORD)pSyscallParameters[1], (QWORD)pSyscallParameters[2]);
+			break;
         default:
             LOG_ERROR("Unimplemented syscall called from User-space!\n");
             status = STATUS_UNSUPPORTED;
             break;
         }
+		}
 
     }
     __finally
@@ -490,3 +515,73 @@ SyscallProcessCreate(
 
 
 }
+
+
+STATUS
+SyscallDisableSyscalls(
+	IN      BOOLEAN     Disable
+) {
+	disableSyscalls = Disable;
+	
+	return STATUS_SUCCESS;
+}
+
+
+STATUS
+SyscallSetGlobalVariable(
+	IN_READS_Z(VarLength)           char* VariableName,
+	IN                              DWORD   VarLength,
+	IN                              QWORD   Value
+) {
+	//we allocate mem for a new GLOBAL variable structure and initialise the fields with the parameters of the syscalls
+	//then add that structure to the list of global variable for this process
+	PPROCESS process;
+	PGLOBAL globalVar;
+		
+	ASSERT(VariableName != NULL);
+	ASSERT(VarLength > 0);
+
+
+	process = GetCurrentProcess();
+
+	globalVar = ExAllocatePoolWithTag(PoolAllocateZeroMemory, sizeof(GLOBAL), HEAP_MMU_TAG, 0);
+	
+
+	*globalVar->varName = *VariableName;
+	globalVar ->Value = Value;
+	globalVar->varLength = VarLength;
+	InsertTailList(&process->globalVarList,&globalVar->globalEntry);
+	return STATUS_SUCCESS;
+	
+}
+STATUS
+SyscallGetGlobalVariable(
+	IN_READS_Z(VarLength)           char* VariableName,
+	IN                              DWORD   VarLength,
+	OUT                             PQWORD  Value
+) {
+	//we iterate in the list of global variable structures for this process and if we find it by Name
+	// we get the Value from that structure 
+	PPROCESS process;
+	PGLOBAL globalVar;
+
+	process = GetCurrentProcess();
+	LIST_ITERATOR it;
+	ListIteratorInit(&process->globalVarList,&it);
+
+	PLIST_ENTRY	 pEntry;
+
+	while ((pEntry = ListIteratorNext(&it)) != NULL)
+	{
+		globalVar = CONTAINING_RECORD(pEntry, GLOBAL, globalEntry);
+
+		if (globalVar->varName == VariableName&&globalVar->varLength==VarLength)
+		{
+			//we found our structure 
+			*Value = globalVar->Value;
+		}
+	}
+
+	return STATUS_UNSUCCESSFUL;
+}
+
