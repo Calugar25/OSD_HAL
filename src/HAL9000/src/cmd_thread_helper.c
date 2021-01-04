@@ -147,6 +147,7 @@ void
     ASSERT( SUCCEEDED(status));
 }
 
+
 void
 (__cdecl CmdYield)(
     IN          QWORD       NumberOfParameters
@@ -699,6 +700,19 @@ STATUS
     LOG("%9x%c", pThread->Process->Id, '|');
     LOG("\n");
 
+	//ityertate in the list of children threads to prin them 
+	LIST_ITERATOR it;
+	INTR_STATE oldState;
+	LockAcquire(&pThread->childLock, &oldState);
+	ListIteratorInit(&pThread->childThreads, &it);
+	PTHREAD childThread;
+	PLIST_ENTRY pEntry;
+	while ((pEntry = ListIteratorNext(&it)) != NULL)
+	{
+		childThread = CONTAINING_RECORD(pEntry, THREAD, childThreads);
+		LOG("This is the child thread%d of parent thread%d", childThread->Id, pThread->Id);
+	}
+	LockRelease(&pThread->childLock, oldState);
     return STATUS_SUCCESS;
 }
 

@@ -39,7 +39,8 @@ typedef struct _THREAD
 
     TID                     Id;
 
-	
+	//in order to know who its parent is 
+	TID Pid;
 
     char*                   Name;
 
@@ -93,6 +94,14 @@ typedef struct _THREAD
     PVOID                   UserStack;
 
     struct _PROCESS*        Process;
+
+
+	DWORD TimesYielded;
+	//list of children threads 
+	LOCK childLock;
+	//_Guarded_by_(childLock)
+	LIST_ENTRY childThreads;
+
 } THREAD, *PTHREAD;
 
 //******************************************************************************

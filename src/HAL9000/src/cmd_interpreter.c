@@ -72,7 +72,7 @@ static const COMMAND_DEFINITION COMMANDS[] =
              "\n\t$NO_OF_THREADS the number of threads for running the test,"
              "if the number is not specified then it will run on 2 * NumberOfProcessors",
              CmdRunTest, 1, 2},
-
+	//{"test","Display a test message",test,0,0},
     { "processes", "Displays all processes", CmdListProcesses, 0, 0},
     { "procstat", "0x$PID - displays information about a process", CmdProcessDump, 1, 1},
     { "procstart", "$PATH_TO_EXE - starts a process", CmdStartProcess, 1, 1},

@@ -79,6 +79,8 @@ typedef struct _PROCESS
 	//a list entry so we can keep a list of structures that hold a global variable 
 	LIST_ENTRY globalVarList;
 
+	//we dont counts for the number of threads , ready threads , blocked threads
+
 } PROCESS, *PPROCESS;
 
 //******************************************************************************

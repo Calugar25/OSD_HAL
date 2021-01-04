@@ -35,7 +35,7 @@ typedef struct _THREAD_SYSTEM_DATA
     LIST_ENTRY          AllThreadsList;
 
     LOCK                ReadyThreadsLock;
-
+	
     _Guarded_by_(ReadyThreadsLock)
     LIST_ENTRY          ReadyThreadsList;
 	volatile DWORD AllThreadsCount;
@@ -421,6 +421,7 @@ ThreadCreateEx(
         ThreadUnblock(pThread);
     }
 
+	LOG("Thread [tid = 0x%X]", pThread->Id);
     *Thread = pThread;
 
     return status;
@@ -493,7 +494,8 @@ ThreadYield(
         pThread->TickCountEarly++;
     }
     pThread->State = ThreadStateReady;
-
+	//increment the value for theThread Yield
+	pThread->TimesYielded++;
     _ThreadSchedule();
     ASSERT( !LockIsOwner(&m_threadSystemData.ReadyThreadsLock));
     LOG_TRACE_THREAD("Returned from _ThreadSchedule\n");
@@ -626,7 +628,7 @@ ThreadTerminate(
     )
 {
     ASSERT( NULL != Thread );
-
+	LOG("Thread [tid = 0x%X] yielded %u times", Thread->Id, Thread->TimesYielded);
     // it's not a problem if the thread already finished
     _InterlockedOr(&Thread->Flags, THREAD_FLAG_FORCE_TERMINATE_PENDING );
 }
@@ -804,13 +806,35 @@ _ThreadInit(
 		pThread->Id = _ThreadSystemGetNextTid();
 		pThread->State = ThreadStateBlocked;
 		pThread->Priority = Priority;
-
+		if (GetCurrentThread() == NULL)
+		{
+			pThread->Pid = 0;
+		}
+		else
+		{
+			pThread->Pid = GetCurrentThread()->Id;
+		}
+		pThread->TimesYielded = 0;
 		
 
 		LockInit(&pThread->BlockLock);
 
+		//initialize for problem 3
+		INTR_STATE auxState;
+		LockInit(&pThread->childLock);
+		InitializeListHead(&pThread->childThreads);
+		if (GetCurrentThread() != NULL)
+		{
+
+			LockAcquire(&GetCurrentThread()->childLock, &auxState);
+			InsertTailList(&GetCurrentThread()->childThreads, &pThread->childThreads);
+			LockRelease(&GetCurrentThread()->childLock, auxState);
+		}
+
 		LockAcquire(&m_threadSystemData.AllThreadsLock, &oldIntrState);
 		InsertTailList(&m_threadSystemData.AllThreadsList, &pThread->AllList);
+		//when we introduce in in the all threads list we need to increment the number of existing threads in the system
+
 		LockRelease(&m_threadSystemData.AllThreadsLock, oldIntrState);
 
 		_InterlockedIncrement(&m_threadSystemData.AllThreadsCount);
