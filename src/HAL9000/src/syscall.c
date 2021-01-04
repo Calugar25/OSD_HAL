@@ -500,7 +500,7 @@ SyscallVirtualAlloc(
 	UNREFERENCED_PARAMETER(Key);
 	UNREFERENCED_PARAMETER(FileHandle);
 	*AllocatedAddress = VmmAllocRegionEx(BaseAddress, Size, AllocType, PageRights, FALSE, NULL, GetCurrentProcess()->VaSpace, GetCurrentProcess()->PagingData, NULL);
-
+	
 	return STATUS_SUCCESS;
 }
 

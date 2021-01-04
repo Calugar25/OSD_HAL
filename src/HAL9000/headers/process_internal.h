@@ -52,7 +52,7 @@ typedef struct _PROCESS
 	PMUTEX numberFramesLock;
 
 	_Guarded_by_(numberFrames)
-	QWORD numberFrames;
+	DWORD numberFrames;
     // The command line also contains the ProcessName
     char*                           FullCommandLine;
     DWORD                           NumberOfArguments;

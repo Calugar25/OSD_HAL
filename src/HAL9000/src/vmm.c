@@ -551,31 +551,31 @@ VmmAllocRegionEx(
     pBaseAddress = NULL;
     pa = NULL;
     alignedSize = 0;
-
+	
     pVaSpace = (VaSpace == NULL) ? &m_vmmData.VmmReservationSpace : VaSpace;
     ASSERT(pVaSpace != NULL);
 
 	
 
 	//increment the number of pages alocated by this process
-	LOG_TRACE("In incrementing the number of pages");
-	if (GetCurrentThread()!=NULL) {
-		
-		PPROCESS process = GetCurrentProcess();
-		
-		QWORD nrFrames = Size / PAGE_SIZE;
+	LOG("In incrementing the number of pages");
+	//__halt();
+	PPROCESS process = GetCurrentProcess();
+	
+	LOG("JUST A TEST");
+	DWORD nrFrames = (DWORD)Size / PAGE_SIZE;
 		//MutexAcquire(&process->numberFramesLock);
-		LOG_ERROR("this is the value we want %d",process->numberFrames);
-		__halt();
-		if (process->numberFrames + nrFrames >= PROCESS_MAX_PHYSICAL_FRAMES)
+	LOG_ERROR("this is the value we want %d",process->numberFrames);
+		
+	if (process->numberFrames + nrFrames >= PROCESS_MAX_PHYSICAL_FRAMES)
 		{
 			//call the evicttion mechanism in order to find the frame to swap out
 
-		}
-		
-		process->numberFrames = process->numberFrames + nrFrames;
-		//MutexRelease(process->numberFramesLock);
 	}
+		
+	process->numberFrames = process->numberFrames + nrFrames;
+		//MutexRelease(process->numberFramesLock);
+	
 
 	
     __try
@@ -757,13 +757,13 @@ VmmFreeRegionEx(
 
 
 	//decrement the user number of physical frames
-	if (GetCurrentThread() != NULL) {
+
 
 	PPROCESS process = GetCurrentProcess();
-	QWORD nrFramesFree = Size / PAGE_SIZE;
+	DWORD nrFramesFree =(DWORD) Size / PAGE_SIZE;
 	process->numberFrames = process->numberFrames - nrFramesFree;
 
-	}
+	
     if (IsFlagOn(FreeType, VMM_FREE_TYPE_DECOMMIT | VMM_FREE_TYPE_RELEASE ))
     {
         ASSERT( NULL != alignedAddress);
