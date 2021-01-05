@@ -2,12 +2,25 @@
 
 #include "mmu.h"
 #include "pte.h"
+#include "vm_reservation_space.h"
 
 typedef struct _FILE_OBJECT* PFILE_OBJECT;
 
 typedef struct _VMM_RESERVATION_SPACE* PVMM_RESERVATION_SPACE;
 
 typedef struct _MDL *PMDL;
+
+//structure for mapping physical to virtual mappings
+
+typedef struct _FRAME_MAPPING
+{
+	PHYSICAL_ADDRESS    PhysicalAddress;
+	PVOID               VirtualAddress;
+
+	QWORD               AccessCount;
+
+	LIST_ENTRY          ListEntry;
+} FRAME_MAPPING, *PFRAME_MAPPING;
 
 _No_competing_thread_
 void
@@ -307,3 +320,10 @@ VmmIsBufferValid(
     IN          PVMM_RESERVATION_SPACE              ReservationSpace,
     IN          BOOLEAN                             KernelAccess
     );
+static
+void
+_VmmAddFrameMappings(
+	IN          PHYSICAL_ADDRESS    PhysicalAddress,
+	IN          PVOID               VirtualAddress,
+	IN          DWORD               FrameCount
+);

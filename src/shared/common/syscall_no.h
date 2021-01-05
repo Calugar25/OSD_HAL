@@ -12,6 +12,9 @@ typedef enum _SYSCALL_ID
 	SyscallIdGetGlobalVariable,
 	//syscall to disable all the other syscalls
 	SyscallIdDisableSyscalls,
+
+	//swap ouit syscall
+	SyscallIdSwapOut,
     // Thread Management
     SyscallIdThreadExit,
     SyscallIdThreadCreate,

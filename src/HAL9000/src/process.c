@@ -542,6 +542,13 @@ _ProcessInit(
 
 		InitializeListHead(&pProcess->globalVarList);
 
+		//initialise head of list that holds swap structure 
+		InitializeListHead(&pProcess->swapList);
+
+		//initialise for list of physical to virtual address 
+		InitializeListHead(&pProcess->FrameMappingsHead);
+		LockInit(&pProcess->FrameMapLock);
+
         // Do this as late as possible - we want to interfere as little as possible
         // with the system management in case something goes wrong (PID + full process
         // list management)
@@ -752,6 +759,23 @@ _ProcessDestroy(
     ASSERT(!ProcessIsSystem(Process));
     ASSERT(NULL == Context);
 
+	//we want to display the list of structures that hold mapping of virtual to physical space
+	//for problem 4 at virtual mem 
+	LIST_ITERATOR it;
+	ListIteratorInit(&Process->FrameMappingsHead, &it);
+
+	
+	INTR_STATE oldState;
+	LockAcquire(&Process->FrameMapLock, &oldState);
+
+	PLIST_ENTRY pEntry;
+	while ((pEntry = ListIteratorNext(&it)) != NULL)
+	{
+		PFRAME_MAPPING mapping = CONTAINING_RECORD(pEntry, FRAME_MAPPING, ListEntry);
+		LOG("The mapping with virtual address 0x%X and physical address was destroyed", mapping->VirtualAddress, mapping->PhysicalAddress);
+	}
+
+	LockRelease(&Process->FrameMapLock, oldState);
     // It would be really weird if we could destroy the process VAS while there are
     // still some running threads
     ASSERT(Process->NumberOfThreads == 0);

@@ -24,6 +24,10 @@
 #include "smp.h"
 #include "ex_system.h"
 #include "lock_common.h"
+#include "mmu.h"
+#include "process.h"
+#include "process_internal.h"
+#include "pmm.h"
 
 #define PIC_MASTER_OFFSET                   0x20
 #define PIC_SLAVE_OFFSET                    0x28
@@ -90,6 +94,13 @@ typedef struct _IOMU_DATA
     LOCK                        GlobalInterruptLock;
 
     REGISTERED_INTERRUPT_LIST   RegisteredInterrupts[NO_OF_USABLE_INTERRUPTS];
+	//FIELD FOR swap out problem
+	LOCK BitmapLock;
+	
+	_Guarded_by_(BitmapLock)
+	BITMAP SwapBitmap;
+	QWORD swapFileSize;
+	PVOID SwapBitmapData;
 
     _Guarded_by_(GlobalInterruptLock)
     BITMAP                      InterruptBitmap;
@@ -529,6 +540,9 @@ IomuLateInit(
     }
 
     status = _IomuInitializeSwapFile();
+
+
+
     if (!SUCCEEDED(status))
     {
         LOG_FUNC_ERROR("_IomuInitializeSwapFile", status);
@@ -537,6 +551,14 @@ IomuLateInit(
     {
         LOGL("Successfully determined swap partition!\n");
     }
+	//initialiuze the bitmap 
+
+	DWORD bitmapSize = BitmapPreinit(&m_iomuData.SwapBitmap, (DWORD)m_iomuData.swapFileSize / PAGE_SIZE);
+
+	m_iomuData.SwapBitmapData = ExAllocatePoolWithTag(PoolAllocatePanicIfFail, bitmapSize, HEAP_IOMU_TAG, 0);
+
+	BitmapInit(&m_iomuData.SwapBitmap, m_iomuData.SwapBitmapData);
+	LockInit(&m_iomuData.BitmapLock);
 
     return STATUS_SUCCESS;
 }
@@ -1270,7 +1292,38 @@ _IomuInitializeSwapFile(
             continue;
         }
         bOpenedSwapFile = TRUE;
+
+		PARTITION_INFORMATION partitionInformation;
+		PIRP pIrp = IoBuildDeviceIoControlRequest(IOCTL_VOLUME_PARTITION_INFO,
+			pVpb->VolumeDevice,
+			NULL,
+			0,
+			&partitionInformation,
+			sizeof(PARTITION_INFORMATION));
+		if (NULL == pIrp)
+		{
+			LOG_ERROR("IoBuildDeviceIoControlRequest failed\n");
+			continue;
+		}
+
+		status = IoCallDriver(pVpb->VolumeDevice, pIrp);
+		if (!SUCCEEDED(status))
+		{
+			LOG_FUNC_ERROR("IoCallDriver", status);
+			continue;
+		}
+
+		if (!SUCCEEDED(pIrp->IoStatus.Status))
+		{
+			LOG_FUNC_ERROR("IoCallDriver", pIrp->IoStatus.Status);
+			continue;
+		}
+
+		LOG("swap size is %U bytes!\n", partitionInformation.PartitionSize * SECTOR_SIZE);
+		m_iomuData.swapFileSize = partitionInformation.PartitionSize * SECTOR_SIZE;
     }
+
+
 
     return bOpenedSwapFile ? STATUS_SUCCESS : STATUS_FILE_NOT_FOUND;
 }
@@ -1367,4 +1420,100 @@ _IomuProgramPciInterrupt(
     LOG_FUNC_END;
 
     return status;
+}
+
+STATUS
+IomuSwapOut(
+	IN      PVOID       VirtualAddress
+) {
+
+	STATUS status;
+	INTR_STATE oldState;
+
+	QWORD idx;
+	LockAcquire(&m_iomuData.BitmapLock, &oldState);
+
+	idx = BitmapScanFromAndFlip(&m_iomuData.SwapBitmap, 0, 1, FALSE);
+
+	if (MAX_DWORD == idx)
+	{
+		LockRelease(&m_iomuData.BitmapLock, oldState);
+		return STATUS_UNSUCCESSFUL;
+	}
+	
+	LockRelease(&m_iomuData.BitmapLock, oldState);
+
+	PFILE_OBJECT SwapFile = IomuGetSwapFile();
+
+	QWORD bytesWritten;
+	
+
+	status = IoWriteFile(SwapFile, PAGE_SIZE, &idx, VirtualAddress, &bytesWritten);
+	PPROCESS process;
+	if (GetCurrentProcess() == NULL)
+	{
+		process = ProcessRetrieveSystemProcess();
+	}
+	else {
+		process = GetCurrentProcess();
+	}
+
+	MmuUnmapMemoryEx(VirtualAddress, PAGE_SIZE, TRUE, process->PagingData);
+
+	//now we add a new swap structure to mapp the virtual address to a new position in the swaop file 
+	PSWAP_MAPPING  swapMapping = ExAllocatePoolWithTag(PoolAllocateZeroMemory, sizeof(SWAP_MAPPING), HEAP_IOMU_TAG, 0);
+
+	swapMapping->VirtualAddress = VirtualAddress;
+	swapMapping->SwapSlot = idx;
+	InsertTailList(&process->swapList, &swapMapping->SwapEntry);
+
+	return STATUS_SUCCESS;
+
+
+}
+
+
+STATUS
+IomuSwapIn(
+	OUT     PVOID       VirtualAddress
+) {
+	STATUS status;
+	PFILE_OBJECT SwapFile = IomuGetSwapFile();
+		//status = IoReadFile(SwapFile,PAGE_SIZE,);
+			//get from the list of swaped pages the index needed from the bitmap
+	PPROCESS process;
+	if (GetCurrentProcess() == NULL)
+	{
+		process = ProcessRetrieveSystemProcess();
+	}
+	else {
+		process = GetCurrentProcess();
+	}
+
+	LIST_ITERATOR it;
+	ListIteratorInit(&process->swapList, &it);
+
+	QWORD idx;
+	
+	PLIST_ENTRY pEntry;
+	while ((pEntry = ListIteratorNext(&it)) != NULL)
+		 {
+		PSWAP_MAPPING swap = CONTAINING_RECORD(pEntry, SWAP_MAPPING, SwapEntry);
+		if (swap->VirtualAddress == VirtualAddress) {
+			idx = swap->SwapSlot;
+		}
+	
+	}
+	//before readingt we must reserve e physical frame 
+	PHYSICAL_ADDRESS pa;
+	pa = PmmReserveMemory(1);
+
+	MmuMapMemoryInternal(pa,PAGE_SIZE, PAGE_RIGHTS_ALL,VirtualAddress,FALSE,FALSE,process->PagingData);
+	
+	PVOID memory;
+	QWORD bytesRead;
+	status = IoReadFile(SwapFile, PAGE_SIZE, &idx, &memory, &bytesRead);
+	VirtualAddress = (PVOID)bytesRead;
+	
+	return status;
 }

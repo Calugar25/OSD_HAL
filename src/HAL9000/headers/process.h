@@ -1,7 +1,7 @@
 #pragma once
 
 #include "process_defs.h"
-
+#include "vmm.h"
 typedef struct _PROCESS* PPROCESS;
 
 //******************************************************************************

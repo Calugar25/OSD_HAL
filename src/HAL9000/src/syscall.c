@@ -130,6 +130,8 @@ SyscallHandler(
 		case SyscallIdSetGlobalVariable:
 			status = SyscallSetGlobalVariable((char*)pSyscallParameters[0], (DWORD)pSyscallParameters[1], (QWORD)pSyscallParameters[2]);
 			break;
+		case SyscallIdSwapOut:
+			status = SyscallSwapOut((PVOID)pSyscallParameters);
         default:
             LOG_ERROR("Unimplemented syscall called from User-space!\n");
             status = STATUS_UNSUPPORTED;
@@ -585,3 +587,12 @@ SyscallGetGlobalVariable(
 	return STATUS_UNSUCCESSFUL;
 }
 
+//swap out syscall 
+STATUS
+SyscallSwapOut(
+	IN      PVOID       VirtualAddress
+) {
+	ASSERT(VirtualAddress != NULL);
+	IomuSwapOut(VirtualAddress);
+	return STATUS_SUCCESS;
+}

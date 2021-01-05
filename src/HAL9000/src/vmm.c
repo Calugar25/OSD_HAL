@@ -24,6 +24,10 @@ typedef struct _VMM_DATA
     BYTE                    UncacheableIndex;
 } VMM_DATA, *PVMM_DATA;
 
+
+
+
+
 typedef
 BOOLEAN
 (__cdecl FUNC_PageWalkCallback)(
@@ -127,6 +131,42 @@ _VmIsKernelAddress(
     )
 {
     return IsBooleanFlagOn((QWORD)Address, (QWORD)1 << VA_HIGHEST_VALID_BIT);
+}
+
+static
+void
+_VmmAddFrameMappings(
+	IN          PHYSICAL_ADDRESS    PhysicalAddress,
+	IN          PVOID               VirtualAddress,
+	IN          DWORD               FrameCount
+)
+{
+	PPROCESS pProcess;
+	PFRAME_MAPPING pMapping;
+	INTR_STATE intrState;
+
+	pProcess = GetCurrentProcess();
+
+	if (ProcessIsSystem(pProcess))
+	{
+		return;
+	}
+
+	for (DWORD i = 0; i < FrameCount; ++i)
+	{
+		pMapping = ExAllocatePoolWithTag(PoolAllocatePanicIfFail, sizeof(FRAME_MAPPING), HEAP_MMU_TAG, 0);
+
+		pMapping->PhysicalAddress = PtrOffset(PhysicalAddress, i * PAGE_SIZE);
+		pMapping->VirtualAddress = PtrOffset(VirtualAddress, i * PAGE_SIZE);
+		pMapping->AccessCount = 1;
+
+		LockAcquire(&pProcess->FrameMapLock, &intrState);
+		InsertTailList(&pProcess->FrameMappingsHead, &pMapping->ListEntry);
+		LockRelease(&pProcess->FrameMapLock, intrState);
+
+		LOG("Allocated entry from 0x%X -> 0x%X\n",
+			pMapping->VirtualAddress, pMapping->PhysicalAddress);
+	}
 }
 
 __forceinline
@@ -573,6 +613,8 @@ VmmAllocRegionEx(
 		LOG("Allocating for VaSpace at 0x%X, a memory region from 0x%X of size 0x%X\n",
 			pVaSpace, pBaseAddress, alignedSize);
 
+
+
         if (!SUCCEEDED(status))
         {
             LOG_FUNC_ERROR("VmReservationSpaceAllocRegion", status);
@@ -603,12 +645,18 @@ VmmAllocRegionEx(
                 ASSERT(alignedSize / PAGE_SIZE <= MAX_DWORD);
                 DWORD noOfFrames = (DWORD)(alignedSize / PAGE_SIZE);
 
+				
+
                 pa = PmmReserveMemory(noOfFrames);
                 if (NULL == pa)
                 {
                     LOG_ERROR("PmmReserverMemory failed!\n");
                     __leave;
                 }
+
+
+				LOG("Physical range allocated :(0x%X--0x%X)!\n",pa,PtrOffset(pa,noOfFrames*PAGE_SIZE));
+
 
                 MmuMapMemoryInternal(pa,
                                      alignedSize,
@@ -618,6 +666,14 @@ VmmAllocRegionEx(
                                      Uncacheable,
                                      PagingData
                 );
+
+
+
+				if (PagingData != NULL && !PagingData->Data.KernelSpace)
+				{
+					_VmmAddFrameMappings(pa, pBaseAddress, noOfFrames);
+				}
+
 
                 // Check if the mapping is backed up by a file
                 if (FileObject != NULL)
@@ -779,6 +835,13 @@ VmmSolvePageFault(
         return FALSE;
     }
 
+	if (!bKernelAddress)
+	{
+		//is user address
+
+	}
+	LOG("Faulting address  0x%X and access rights 0x%X", FaultingAddress,RightsRequested);
+
     bSolvedPageFault = FALSE;
     bAccessValid = FALSE;
     status = STATUS_SUCCESS;
@@ -824,6 +887,12 @@ VmmSolvePageFault(
                                  PagingData
                                  );
 
+
+			if (!PagingData->Data.KernelSpace)
+			{
+				_VmmAddFrameMappings(pa, alignedAddress, 1);
+			}
+				
             // 3. If the virtual address is backed by a file read its contents
             if (pBackingFile != NULL)
             {
@@ -1381,3 +1450,5 @@ BOOLEAN
 
     return bContinue;
 }
+
+//function to add frame mappings 

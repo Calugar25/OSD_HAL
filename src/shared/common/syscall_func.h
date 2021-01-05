@@ -349,3 +349,10 @@ SyscallGetGlobalVariable(
 	IN                              DWORD   VarLength,
 	OUT                             PQWORD  Value
 );
+
+
+
+STATUS
+SyscallSwapOut(
+	IN      PVOID       VirtualAddress
+);

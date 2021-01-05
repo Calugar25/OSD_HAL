@@ -5,6 +5,7 @@
 #include "process.h"
 #include "synch.h"
 #include "ex_event.h"
+#include "vmm.h"
 
 #define PROCESS_MAX_PHYSICAL_FRAMES     16
 #define PROCESS_MAX_OPEN_FILES          16
@@ -17,6 +18,15 @@ typedef struct _GLOBAL {
 	QWORD Value;
 	LIST_ENTRY globalEntry;
 }GLOBAL,*PGLOBAL;
+
+//structure that hold virtual address to swap slot mappign
+typedef struct _SWAP_MAPPING {
+	PVOID VirtualAddress;
+	QWORD SwapSlot;
+	LIST_ENTRY SwapEntry;
+	
+}SWAP_MAPPING, * PSWAP_MAPPING;
+
 
 typedef struct _PROCESS
 {
@@ -68,7 +78,8 @@ typedef struct _PROCESS
     // VaSpace used only for UM virtual memory allocations
     struct _VMM_RESERVATION_SPACE*  VaSpace;
 
-
+	//Per process list of swap structures that mapp the vitual address to the swap slot 
+	LIST_ENTRY swapList;
 	///lab review problems userprog part 
 	//list of all child processes 
 	LOCK                            childLock;
@@ -80,6 +91,12 @@ typedef struct _PROCESS
 	LIST_ENTRY globalVarList;
 
 	//we dont counts for the number of threads , ready threads , blocked threads
+
+	LOCK                            FrameMapLock;
+
+	_Guarded_by_(FrameMapLock)
+		LIST_ENTRY                      FrameMappingsHead;
+
 
 } PROCESS, *PPROCESS;
 
