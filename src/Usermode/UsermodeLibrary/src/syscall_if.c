@@ -18,6 +18,19 @@ SyscallValidateInterface(
     return SyscallEntry(SyscallIdIdentifyVersion, InterfaceVersion);
 }
 
+//
+//STATUS
+//SyscallGetNumberOfThreadsInInterval(
+//	IN                              QWORD   StartCreateTime,
+//	IN                              QWORD   EndCreateTime,
+//	OUT                          QWORD* NumberOfThreads
+//)
+//{
+//	return SyscallEntry(SyscallIdGetNumberOfThreadsInInterval, StartCreateTime, EndCreateTime, NumberOfThreads);
+//}
+
+
+
 // SyscallIdThreadExit
 STATUS
 SyscallThreadExit(
@@ -196,3 +209,4 @@ SyscallFileWrite(
 {
     return SyscallEntry(SyscallIdFileWrite, FileHandle, Buffer, BytesToWrite, BytesWritten);
 }
+

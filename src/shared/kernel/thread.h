@@ -120,3 +120,11 @@ THREAD_PRIORITY
 ThreadGetPriority(
     IN_OPT  PTHREAD             Thread
     );
+
+
+STATUS
+getNumberOfThreads(
+	IN                              QWORD   StartCreateTime,
+	IN                              QWORD   EndCreateTime,
+	OUT                          QWORD* NumberOfThreads
+);

@@ -4,6 +4,8 @@ typedef enum _SYSCALL_ID
 {
     SyscallIdIdentifyVersion,
 
+	//SyscallIdGetNumberOfThreadsInInterval,
+
     // Thread Management
     SyscallIdThreadExit,
     SyscallIdThreadCreate,

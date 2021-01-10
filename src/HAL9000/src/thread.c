@@ -9,12 +9,17 @@
 #include "isr.h"
 #include "gdtmu.h"
 #include "pe_exports.h"
+#include "rtc.h"
+#include "sal_intrinsic.h"
 
 #define TID_INCREMENT               4
 
 #define THREAD_TIME_SLICE           1
 
 extern void ThreadStart();
+
+//my compare function 
+
 
 typedef
 void
@@ -25,7 +30,7 @@ void
 
 extern FUNC_ThreadSwitch            ThreadSwitch;
 
-
+static FUNC_CompareFunction     _myCompareFunction;
  
 typedef struct _THREAD_SYSTEM_DATA
 {
@@ -39,6 +44,10 @@ typedef struct _THREAD_SYSTEM_DATA
     _Guarded_by_(ReadyThreadsLock)
     LIST_ENTRY          ReadyThreadsList;
 	volatile DWORD AllThreadsCount;
+
+	LOCK CreationTimeLock;
+	LIST_ENTRY CreationTimeListHead;
+
 } THREAD_SYSTEM_DATA, *PTHREAD_SYSTEM_DATA;
 
 static THREAD_SYSTEM_DATA m_threadSystemData;
@@ -150,8 +159,12 @@ ThreadSystemPreinit(
     InitializeListHead(&m_threadSystemData.AllThreadsList);
     LockInit(&m_threadSystemData.AllThreadsLock);
 
+	InitializeListHead(&m_threadSystemData.CreationTimeListHead);
+
     InitializeListHead(&m_threadSystemData.ReadyThreadsList);
     LockInit(&m_threadSystemData.ReadyThreadsLock);
+
+	LockInit(&m_threadSystemData.CreationTimeLock);
 	m_threadSystemData.AllThreadsCount = 0;
 }
 
@@ -801,14 +814,38 @@ _ThreadInit(
 		pThread->Id = _ThreadSystemGetNextTid();
 		pThread->State = ThreadStateBlocked;
 		pThread->Priority = Priority;
+		pThread->creationTime = RtcGetTickCount();
+		pThread->descendants = 0;
 
-		
+		pThread->parentThread = NULL;
+
+		PTHREAD parent = GetCurrentThread();
+		LOG("As a result of tid = 0x%X , %s creation:\n", pThread->Id, pThread->Name);
+
+		if (parent != NULL)
+		{
+			_ThreadReference(parent);
+			pThread->parentThread = parent;
+			while (parent)
+			{
+				_InterlockedIncrement(&parent->descendants);
+				LOG("tid=0x%X %s created = 0x%X now has %d descendents", parent->Id, parent->Name,pThread->Id, parent->descendants);
+				parent = parent->parentThread;
+			}
+
+		}
 
 		LockInit(&pThread->BlockLock);
+		LockInit(&pThread->CreationTimeElementLock);
 
 		LockAcquire(&m_threadSystemData.AllThreadsLock, &oldIntrState);
 		InsertTailList(&m_threadSystemData.AllThreadsList, &pThread->AllList);
 		LockRelease(&m_threadSystemData.AllThreadsLock, oldIntrState);
+		INTR_STATE oldState;
+		//add the list entry for the list of threads based on creation time in the global list of threads 
+		LockAcquire(&m_threadSystemData.CreationTimeLock, &oldState);
+		InsertOrderedList(&m_threadSystemData.CreationTimeListHead, &pThread->CreationTimeElement, _myCompareFunction, NULL);
+		LockRelease(&m_threadSystemData.CreationTimeLock, oldState);
 
 		_InterlockedIncrement(&m_threadSystemData.AllThreadsCount);
 	}
@@ -968,8 +1005,8 @@ _ThreadSetupMainThreadUserStack(
     ASSERT(ResultingStack != NULL);
     ASSERT(Process != NULL);
 
-    *ResultingStack = InitialStack;
-
+   // *ResultingStack = InitialStack;
+	*ResultingStack = (PVOID)PtrDiff(InitialStack, SHADOW_STACK_SIZE + sizeof(PVOID));
     return STATUS_SUCCESS;
 }
 
@@ -1200,10 +1237,21 @@ _ThreadDestroy(
     )
 {
     INTR_STATE oldState;
-    PTHREAD pThread = (PTHREAD) Object;
+    PTHREAD pThread = (PTHREAD) CONTAINING_RECORD(Object,THREAD,RefCnt);
 
     ASSERT(NULL != pThread);
     ASSERT(NULL == Context);
+
+	if (pThread->parentThread)
+	{
+		PTHREAD parent = pThread->parentThread;
+		while (parent)
+		{
+			_InterlockedDecrement(&parent->descendants);
+			parent = parent->parentThread;
+		}
+		_ThreadDereference(pThread->parentThread);
+	}
 
     LockAcquire(&m_threadSystemData.AllThreadsLock, &oldState);
     RemoveEntryList(&pThread->AllList);
@@ -1236,6 +1284,11 @@ _ThreadDestroy(
         MmuFreeStack(pThread->Stack, NULL);
         pThread->Stack = NULL;
     }
+	INTR_STATE oldState2;
+	LockAcquire(&pThread->CreationTimeElementLock, &oldState2);
+	RemoveEntryList(&pThread->CreationTimeElement);
+	LockRelease(&pThread->CreationTimeElementLock, oldState2);
+	
 
     ExFreePoolWithTag(pThread, HEAP_THREAD_TAG);
 	_InterlockedDecrement(&m_threadSystemData.AllThreadsCount);
@@ -1259,4 +1312,61 @@ _ThreadKernelFunction(
 
     ThreadExit(exitStatus);
     NOT_REACHED;
+}
+
+
+
+static
+INT64
+(__cdecl _myCompareFunction) (
+	IN      PLIST_ENTRY     FirstElem,
+	IN      PLIST_ENTRY     SecondElem,
+	IN_OPT  PVOID           Context
+	)
+{
+	PTHREAD firstThread;
+	PTHREAD secondThread;
+
+	ASSERT(NULL != FirstElem);
+	ASSERT(NULL != SecondElem);
+	ASSERT(Context == NULL);
+
+	firstThread = CONTAINING_RECORD(FirstElem, THREAD, CreationTimeElement);
+	secondThread = CONTAINING_RECORD(SecondElem, THREAD, CreationTimeElement);
+
+	return (firstThread->creationTime - secondThread->creationTime);
+}
+
+STATUS
+getNumberOfThreads(
+	IN                              QWORD   StartCreateTime,
+	IN                              QWORD   EndCreateTime,
+	OUT                          QWORD* NumberOfThreads
+)
+{
+
+	ASSERT(StartCreateTime > 0);
+	ASSERT(EndCreateTime >= StartCreateTime);
+	LIST_ITERATOR it;
+
+	ListIteratorInit(&m_threadSystemData.CreationTimeListHead, &it);
+
+	PLIST_ENTRY pEntry;
+	QWORD NrThreads = 0;
+
+	INTR_STATE oldState;
+	
+	LockAcquire(&m_threadSystemData.CreationTimeLock, &oldState);
+	while ((pEntry = ListIteratorNext(&it)) != NULL)
+	{
+		PTHREAD thread = CONTAINING_RECORD(pEntry, THREAD, CreationTimeElement);
+		if (thread->creationTime >= StartCreateTime&& thread->creationTime <= EndCreateTime);
+		{
+			NrThreads++;
+		}
+	}
+	*NumberOfThreads = NrThreads;
+	LockRelease(&m_threadSystemData.CreationTimeLock,oldState);
+
+	return STATUS_SUCCESS;
 }

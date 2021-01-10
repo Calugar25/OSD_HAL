@@ -25,6 +25,7 @@
 
 static FUNC_GenericCommand  _CmdPrintHelp;
 
+
 // warning C4212: nonstandard extension used: function declaration used ellipsis
 #pragma warning(push)
 #pragma warning(disable:4212)
@@ -68,6 +69,7 @@ static const COMMAND_DEFINITION COMMANDS[] =
                 "\n\t$TIMES - number of times to wait for timer, valid only if periodic", CmdTestTimer, 1, 3},
 
     { "threads", "Displays all threads", CmdListThreads, 0, 0},
+	 { "testdescendents", "Test the descendents ", CmdTestDescendents, 0, 0},
     { "run", "$TEST [$NO_OF_THREADS]\n\tRuns the $TEST specified"
              "\n\t$NO_OF_THREADS the number of threads for running the test,"
              "if the number is not specified then it will run on 2 * NumberOfProcessors",
@@ -107,6 +109,8 @@ static const COMMAND_DEFINITION COMMANDS[] =
     { "bitecookie", "Causes a GS cookie corruption to assert", CmdBiteCookie, 0, 0},
 
     { "help", "Displays this help menu", _CmdPrintHelp, 0, 0}
+
+	
 };
 
 #define NO_OF_COMMANDS      ARRAYSIZE(COMMANDS)
@@ -328,5 +332,7 @@ _CmdExecuteModuleCommands(
 
     return bExit;
 }
+
+
 
 #pragma warning(pop)

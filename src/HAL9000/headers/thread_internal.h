@@ -93,6 +93,18 @@ typedef struct _THREAD
     PVOID                   UserStack;
 
     struct _PROCESS*        Process;
+
+	//entry to keep the thread creatinon time 
+	LOCK CreationTimeElementLock;
+	LIST_ENTRY CreationTimeElement;
+
+	QWORD creationTime;
+
+	PTHREAD parentThread;
+
+	//number of descendants 
+	volatile DWORD descendants;
+
 } THREAD, *PTHREAD;
 
 //******************************************************************************

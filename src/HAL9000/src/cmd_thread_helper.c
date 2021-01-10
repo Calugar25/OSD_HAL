@@ -33,6 +33,8 @@ static FUNC_IpcProcessEvent _CmdIpiCmd;
 #define IO_BOUND_CPU_USAGE          (0 * MS_IN_US)
 #define IO_BOUND_EVENT_TIMES        25
 
+
+
 typedef struct _BOUND_THREAD_CTX
 {
     DWORD                   CpuUsage;
@@ -777,5 +779,173 @@ STATUS
 
     return STATUS_SUCCESS;
 }
+
+static
+STATUS
+ThreadBasic(
+	IN_OPT PVOID Context
+)
+{
+	UNREFERENCED_PARAMETER(Context);
+
+	LOG("Hello from the basic thread 0x%X", GetCurrentThread()->Id);
+
+	return STATUS_SUCCESS;
+}
+
+
+
+
+
+
+static
+STATUS
+Thread10Start(
+	IN_OPT PVOID Context
+)
+{
+	UNREFERENCED_PARAMETER(Context);
+	LOG("Thread 0 started\n");
+
+
+
+	DWORD i;
+	char threadName[MAX_PATH];
+	STATUS status;
+
+
+
+	for (i = 1; i < 11; i++)
+	{
+		PTHREAD pthread = NULL;
+		snprintf(threadName, MAX_PATH, "Thread%02x", i);
+		status = ThreadCreate(
+			threadName,
+			ThreadPriorityDefault,
+			ThreadBasic,
+			NULL,
+			&pthread);
+		if (!SUCCEEDED(status))
+		{
+			LOG("Creation of thread failed; status = 0x%X\n", status);
+			return status;
+		}
+		ThreadWaitForTermination(pthread, &status);
+		ThreadCloseHandle(pthread);
+	}
+	return status;
+}
+
+
+
+
+
+static
+STATUS
+Thread1Startv1(
+	IN_OPT PVOID Context
+)
+{
+	UNREFERENCED_PARAMETER(Context);
+
+	LOG("hELLO FORM THREAD 1");
+	PTHREAD thread2 = NULL;
+	STATUS status = ThreadCreate("Thread1Startv1", ThreadPriorityDefault, ThreadBasic, NULL, &thread2);
+
+	if (!SUCCEEDED(status))
+	{
+		return status;
+
+	}
+
+	ThreadWaitForTermination(thread2, &status);
+	ThreadCloseHandle(thread2);
+	return status;
+}
+
+static
+STATUS
+Thread1Start(
+	IN_OPT PVOID Context
+)
+{
+	UNREFERENCED_PARAMETER(Context);
+
+	LOG("hELLO FORM THREAD 1");
+	PTHREAD thread2 = NULL;
+	STATUS status = ThreadCreate("Thread1start", ThreadPriorityDefault, Thread1Startv1, NULL, &thread2);
+
+	if (!SUCCEEDED(status))
+	{
+		return status;
+
+	}
+
+	ThreadWaitForTermination(thread2, &status);
+	ThreadCloseHandle(thread2);
+	return status;
+}
+
+
+
+void
+(__cdecl CmdTestDescendents)(
+	IN      QWORD           NumberOfParameters
+	)
+{
+	STATUS status;
+
+	ASSERT(NumberOfParameters == 0);
+
+	PTHREAD thread1 = NULL;
+	status = ThreadCreate("Thread1",
+		ThreadPriorityDefault,
+		Thread10Start,
+		NULL,
+		&thread1);
+
+	if (!SUCCEEDED(status))
+	{
+		LOG_ERROR("Thread Create Failer with %d", status);
+
+	}
+	ThreadWaitForTermination(thread1, &status);
+	ThreadCloseHandle(thread1);
+
+	STATUS status1;
+	PTHREAD thread2 = NULL;
+	status1 = ThreadCreate("Thread1",
+		ThreadPriorityDefault,
+		Thread1Start,
+		NULL,
+		&thread2);
+
+	if (!SUCCEEDED(status))
+	{
+		LOG_ERROR("Thread Create Failer with %d", status1);
+
+	}
+	ThreadWaitForTermination(thread2, &status1);
+	ThreadCloseHandle(thread2);
+
+	STATUS status2;
+	PTHREAD thread3 = NULL;
+	status2 = ThreadCreate("Thread1",
+		ThreadPriorityDefault,
+		ThreadBasic,
+		NULL,
+		&thread3);
+
+	if (!SUCCEEDED(status))
+	{
+		LOG_ERROR("Thread Create Failer with %d", status2);
+
+	}
+	ThreadWaitForTermination(thread3, &status2);
+	ThreadCloseHandle(thread3);
+}
+
+
+
 
 #pragma warning(pop)
