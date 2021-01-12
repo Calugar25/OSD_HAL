@@ -10,6 +10,8 @@ __main(
 {
     UNREFERENCED_PARAMETER(argc);
     UNREFERENCED_PARAMETER(argv);
-
+	//call to ThreadGetNumberOfSiblings 
+	DWORD* NoSib;
+	STATUS status = SyscallThreadGetNumberOfSiblings(&NoSib);
     return STATUS_SUCCESS;
 }

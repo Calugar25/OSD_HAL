@@ -196,3 +196,11 @@ SyscallFileWrite(
 {
     return SyscallEntry(SyscallIdFileWrite, FileHandle, Buffer, BytesToWrite, BytesWritten);
 }
+
+
+STATUS
+SyscallThreadGetNumberOfSiblings(
+	OUT DWORD* NumberOfSiblings
+) {
+	return SyscallEntry(SyscallIdThreadGetNumberOfSiblings, NumberOfSiblings);
+}

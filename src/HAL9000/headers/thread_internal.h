@@ -92,6 +92,18 @@ typedef struct _THREAD
     // MUST be non-NULL for all threads which belong to user-mode processes
     PVOID                   UserStack;
 
+
+	//hold the number of children of a thread no need for lock 
+
+	DWORD NoOfChilds;
+
+	//hold the number of siblings 
+	//basically for a thread the number of siblings is the number of descendents that the parent thread has -1
+	//so we can keep the number of descendents 
+	volatile DWORD NoOfDescendents;
+	//hold the parent Thread
+	PTHREAD ParentThread;
+
     struct _PROCESS*        Process;
 } THREAD, *PTHREAD;
 

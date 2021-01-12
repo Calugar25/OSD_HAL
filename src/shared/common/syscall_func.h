@@ -306,3 +306,7 @@ SyscallFileWrite(
     IN  QWORD                       BytesToWrite,
     OUT QWORD*                      BytesWritten
     );
+STATUS
+SyscallThreadGetNumberOfSiblings(
+	OUT DWORD* NumberOfSiblings
+);

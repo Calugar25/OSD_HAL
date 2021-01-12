@@ -7,7 +7,8 @@
 #include "mmu.h"
 #include "process_internal.h"
 #include "dmp_cpu.h"
-
+#include "thread_internal.h"
+#include "thread.h"
 extern void SyscallEntry();
 
 #define SYSCALL_IF_VERSION_KM       SYSCALL_IMPLEMENTED_IF_VERSION
@@ -67,6 +68,8 @@ SyscallHandler(
         case SyscallIdIdentifyVersion:
             status = SyscallValidateInterface((SYSCALL_IF_VERSION)*pSyscallParameters);
             break;
+		case SyscallIdThreadGetNumberOfSiblings:
+			status = SyscallThreadGetNumberOfSiblings((DWORD*)*pSyscallParameters);
         // STUDENT TODO: implement the rest of the syscalls
         default:
             LOG_ERROR("Unimplemented syscall called from User-space!\n");
@@ -169,4 +172,21 @@ SyscallValidateInterface(
     return STATUS_SUCCESS;
 }
 
+
+STATUS
+SyscallThreadGetNumberOfSiblings(
+	OUT DWORD* NumberOfSiblings
+) {
+	
+	PTHREAD thread = GetCurrentThread();
+	if (thread)
+	{
+		*NumberOfSiblings = ThreadGetNumberOfSiblings(thread);
+	}
+	else
+	{
+		return STATUS_UNSUCCESSFUL;
+	}
+	return STATUS_SUCCESS;
+}
 // STUDENT TODO: implement the rest of the syscalls

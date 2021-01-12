@@ -13,6 +13,8 @@
 #include "cmd_net_helper.h"
 #include "cmd_basic.h"
 #include "boot_module.h"
+#include "thread_internal.h"
+#include "thread.h"
 
 #pragma warning(push)
 
@@ -68,6 +70,8 @@ static const COMMAND_DEFINITION COMMANDS[] =
                 "\n\t$TIMES - number of times to wait for timer, valid only if periodic", CmdTestTimer, 1, 3},
 
     { "threads", "Displays all threads", CmdListThreads, 0, 0},
+	{ "testsiblings", "Test the Siblings ", CmdTestSiblings, 0, 0},
+
     { "run", "$TEST [$NO_OF_THREADS]\n\tRuns the $TEST specified"
              "\n\t$NO_OF_THREADS the number of threads for running the test,"
              "if the number is not specified then it will run on 2 * NumberOfProcessors",
@@ -328,5 +332,92 @@ _CmdExecuteModuleCommands(
 
     return bExit;
 }
+
+static
+STATUS
+ThreadHello(
+	IN_OPT PVOID Context
+)
+{
+	UNREFERENCED_PARAMETER(Context);
+
+	LOG("Hello\n");
+	//if this is called by thread 13 Call The Thread Get Number of siblings for this and log 
+	if (GetCurrentThread()->Id == 13)
+	{
+		LOG("The number of siblings for this thread is %d\n", ThreadGetNumberOfSiblings(GetCurrentThread()));
+	}
+
+	return STATUS_SUCCESS;
+}
+
+
+
+static
+STATUS
+Thread1Function(
+	IN_OPT PVOID Context
+)
+{
+	UNREFERENCED_PARAMETER(Context);
+	
+
+
+
+	DWORD i;
+	char threadName[MAX_PATH];
+	STATUS status;
+
+
+
+	for (i = 1; i < 4; i++)
+	{
+		PTHREAD pthread = NULL;
+		snprintf(threadName, MAX_PATH, "Thread%02x", i+10);
+		status = ThreadCreate(
+			threadName,
+			ThreadPriorityDefault,
+			ThreadHello,
+			NULL,
+			&pthread);
+		if (!SUCCEEDED(status))
+		{
+			LOG("Creation of thread failed; status = 0x%X\n", status);
+			return status;
+		}
+
+		//WAIT FOR GTERMINATION AND CLOSE HANDL;E
+		ThreadWaitForTermination(pthread, &status);
+		ThreadCloseHandle(pthread);
+	}
+	return status;
+}
+
+
+void
+(__cdecl CmdTestSiblings)(
+	IN      QWORD           NumberOfParameters
+	)
+{
+	STATUS status;
+
+	ASSERT(NumberOfParameters == 0);
+
+	PTHREAD thread1 = NULL;
+	status = ThreadCreate("Thread1",
+		ThreadPriorityDefault,
+		Thread1Function,
+		NULL,
+		&thread1);
+	
+	ThreadWaitForTermination(thread1, &status);
+
+	
+	
+	//ThreadCloseHandle(thread1);
+
+	
+}
+
 
 #pragma warning(pop)

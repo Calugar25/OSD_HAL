@@ -120,3 +120,8 @@ THREAD_PRIORITY
 ThreadGetPriority(
     IN_OPT  PTHREAD             Thread
     );
+
+DWORD
+ThreadGetNumberOfSiblings(
+IN PTHREAD Thread
+);

@@ -801,10 +801,34 @@ _ThreadInit(
 		pThread->Id = _ThreadSystemGetNextTid();
 		pThread->State = ThreadStateBlocked;
 		pThread->Priority = Priority;
-
 		
 
+		//initialise the number of children threads for the thread that is created
+		pThread->NoOfChilds = 0;
+
+		pThread->NoOfDescendents = 0;
+		pThread->ParentThread = NULL;
+		PTHREAD parent = GetCurrentThread();
+		//if the current thread is the first thread in the process getCurretThread will give us null so we have to check 
+
+		if (parent != NULL)
+		{
+			_ThreadReference(parent);
+			pThread->ParentThread = parent;
+			//we just have to increment the number of descendents for the parent thread
+			_InterlockedIncrement(&parent->NoOfDescendents);
+		}
+		
+		
+		PTHREAD parentThread = GetCurrentThread();
+		//the parent THread is the thread that created pThread so we have to increment the attribute
+		if (parentThread != NULL)
+		{
+			parentThread->NoOfChilds = parentThread->NoOfChilds + 1;
+		}
+
 		LockInit(&pThread->BlockLock);
+		
 
 		LockAcquire(&m_threadSystemData.AllThreadsLock, &oldIntrState);
 		InsertTailList(&m_threadSystemData.AllThreadsList, &pThread->AllList);
@@ -1200,10 +1224,27 @@ _ThreadDestroy(
     )
 {
     INTR_STATE oldState;
-    PTHREAD pThread = (PTHREAD) Object;
+    PTHREAD pThread = (PTHREAD) CONTAINING_RECORD(Object,THREAD,RefCnt);
 
     ASSERT(NULL != pThread);
     ASSERT(NULL == Context);
+
+	
+	//we just display the number of children the thread that is destroyed had
+	LOG("Thread[tid = 0x%X] died, it had %d children",pThread->Id,pThread->NoOfChilds);
+
+	if (pThread->ParentThread)
+	{
+		PTHREAD parent = pThread->ParentThread;
+		if (parent)
+		{
+			_InterlockedDecrement(&parent->NoOfDescendents);
+			
+		}
+		//we dereference the parent 
+		_ThreadDereference(pThread->ParentThread);
+	}
+
 
     LockAcquire(&m_threadSystemData.AllThreadsLock, &oldState);
     RemoveEntryList(&pThread->AllList);
@@ -1259,4 +1300,21 @@ _ThreadKernelFunction(
 
     ThreadExit(exitStatus);
     NOT_REACHED;
+}
+
+DWORD
+ThreadGetNumberOfSiblings(
+	IN PTHREAD Thread
+) {
+	ASSERT(Thread != NULL);
+	DWORD value = 0;
+	PTHREAD parent = GetCurrentThread();
+	if (parent)
+	{
+		value = parent->NoOfDescendents - 1;
+		
+	}
+	return value;
+
+	
 }

@@ -675,10 +675,23 @@ VmmAllocRegionEx(
             if (IsBooleanFlagOn(Rights, PAGE_RIGHTS_EXECUTE | PAGE_RIGHTS_WRITE))
             {
                 LOG_WARNING("Successfully mapped W+X memory at 0x%X of size 0x%X\n",
-                            pBaseAddress, alignedSize);
+                            pBaseAddress, pBaseAddress);
             }
+			if (IsBooleanFlagOn(Rights, PAGE_RIGHTS_EXECUTE | PAGE_RIGHTS_WRITE))
+			{
+				LOG_WARNING("Successfully mapped W+X memory at 0x%X of size 0x%X\n",
+					pBaseAddress, pBaseAddress);
+			}
+			if (IsBooleanFlagOn(Rights,  PAGE_RIGHTS_WRITE))
+			{
+				LOG_WARNING("Writeable virtual range allocated: ( 0x%X -  0x%X)\n",
+					pBaseAddress, PtrOffset(pBaseAddress,alignedSize));
+			}
         }
     }
+
+	
+
 
     return pBaseAddress;
 }
